@@ -18,5 +18,5 @@ server = ModularServer(WorkerModel,
                        [grid],
                        "Worker Model",
                        {"N":10, "width":10, "height":10})
-server.port = 8524
+server.port = 8511
 server.launch()

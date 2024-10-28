@@ -1,10 +1,13 @@
+import random
 import seaborn as sns
 import numpy as np
 import pandas as pd
-from mesa import Agent, Model
+from mesa import Agent, DataCollector, Model
 from mesa.time import RandomActivation
 from mesa.space import MultiGrid
-from Agent import WorkerAgent
+from Agent import WorkerAgent, WorkerViz
+from mesa.visualization.modules import CanvasGrid, ChartModule
+from mesa.visualization.ModularVisualization import ModularServer
 
 class WorkerModel(Model):
     """Model with n agents"""
@@ -23,4 +26,72 @@ class WorkerModel(Model):
     def step(self):
         self.schedule.step()
 
+class FactoryModel(Model):
+    def __init__(self, width, height, N):
+        self.num_agents = N
+        self.grid = MultiGrid(width, height, True)
+        self.schedule = RandomActivation(self)
+        
+        self.central_line = width // 2
 
+        first_infections = random.randrange(N) #Just start with one agent for now
+
+        for i in range(self.num_agents):
+            side = 'left' if random.random() < 0.5 else 'right'
+            worker = WorkerAgent(i, self, side)
+            if i == first_infections:
+                worker.health_status = "infected"
+            self.schedule.add(worker)
+
+            x = self.random.randrange(self.central_line) if side == 'left' else self.random.randrange(self.central_line, width)
+            y = self.random.randrange(self.grid.height)
+            self.grid.place_agent(worker, (x, y))
+        
+        self.datacollector = DataCollector(
+            {
+                "Healthy": lambda m: self.count_health_status(m, "healthy"),
+                "Infected": lambda m: self.count_health_status(m, "infected"),
+                "Recovered": lambda m: self.count_health_status(m, "recovered"),
+            }
+        )
+
+    def step(self):
+        self.datacollector.collect(self)
+        self.schedule.step()
+
+    @staticmethod
+    def count_health_status(model, status):
+        count = 0
+        for agent in model.schedule.agents:
+            if agent.health_status == status:
+                count += 1
+        return count
+
+#width, height, num_workers = 20, 10, 50
+#factory = FactoryModel(width, height, num_workers)
+#for i in range(100):
+    #factory.step()
+
+width = 20 
+height = 10
+grid = CanvasGrid(WorkerViz, width, height, 500, 250)
+
+chart = ChartModule(
+    [
+        {"Label": "Healthy", "Color": "green"},
+        {"Label": "Infected", "Color": "red"},
+        {"Label": "Recovered", "Color": "blue"}
+    ]
+)
+
+
+#Server initialization for visualization and graphing
+server = ModularServer(
+    FactoryModel,
+    [grid, chart],
+    "Factory Infection Model",
+    {"width": width, "height": height, "N": 50}
+)
+
+server.port = 8521
+server.launch()
