@@ -16,22 +16,22 @@
 
 ## Features
 
-- List key features of your project.
-- Highlight what makes it unique or useful.
 
 ## Installation
 
 ### Prerequisites
 
 - Python 3.10 or higher
-- miniconda3 (https://docs.anaconda.com/miniconda/miniconda-install/)
+- [miniconda3](https://docs.anaconda.com/miniconda/miniconda-install/)
 - VSCode, PyCharm, or your preferred IDE
 
 ### Clone the Repository
 
-If you are using GitHub Personal Access Token, follow the tutorial [here](https://kettan007.medium.com/how-to-clone-a-git-repository-using-personal-access-token-a-step-by-step-guide-ab7b54d4ef83)```bash
+If you are using GitHub Personal Access Token, follow the tutorial [here](https://kettan007.medium.com/how-to-clone-a-git-repository-using-personal-access-token-a-step-by-step-guide-ab7b54d4ef83)
+```bash
 git clone https://github.khoury.northeastern.edu/samp3209/CS5100Final.git
-cd CS5100Final```
+cd CS5100Final
+```
 
 ### Set up Python Environment
 
@@ -51,7 +51,7 @@ conda activate virus_sim
 pip install -r requirements.txt
 ```
 
-Note: If you encounter any issues with the installation, make sure your Conda and pip are up to date:
+Note: If you encounter any issues with the installation, make sure your conda and pip are up to date:
 ```bash
 conda update conda
 pip install --upgrade pip
