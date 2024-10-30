@@ -16,8 +16,6 @@
 
 ## Features
 
-- List key features of your project.
-- Highlight what makes it unique or useful.
 
 ## Installation
 
@@ -29,7 +27,8 @@
 
 ### Clone the Repository
 
-If you are using GitHub Personal Access Token, follow the tutorial [here](https://kettan007.medium.com/how-to-clone-a-git-repository-using-personal-access-token-a-step-by-step-guide-ab7b54d4ef83)```bash
+If you are using GitHub Personal Access Token, follow the tutorial [here](https://kettan007.medium.com/how-to-clone-a-git-repository-using-personal-access-token-a-step-by-step-guide-ab7b54d4ef83)
+```bash
 git clone https://github.khoury.northeastern.edu/samp3209/CS5100Final.git
 cd CS5100Final```
 
