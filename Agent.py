@@ -7,7 +7,7 @@ class WorkerAgent(Agent):
     def __init__(self, unique_id, model, side):
         super().__init__(unique_id, model)
         self.side = side
-        self.health_status = 'healthy'
+        self.health_status = "healthy"
         self.infenction_chance = 0.1
         self.infection_time = 0
     
@@ -22,7 +22,7 @@ class WorkerAgent(Agent):
         ]
 
         if possible_moves:
-            new_move = self.random_choice(possible_moves)
+            new_move = self.random.choice(possible_moves)
             self.model.grid.move_agent(self, new_move)
 
     def infection(self): 
@@ -35,7 +35,7 @@ class WorkerAgent(Agent):
                 if isinstance(other, WorkerAgent):
                     if other.health_status == 'healthy':
                         if self.random.random() <= 0.2: # 20% chance to infect
-                            other.health_status == 'infected'
+                            other.health_status = 'infected'
     
     def update_health(self):
         """Updates the health of a sick worker. 
@@ -46,7 +46,7 @@ class WorkerAgent(Agent):
         if self.health_status == 'infected':
             self.infection_time += 1
             if self.infection_time > 14:
-                self.health_status == 'recovered'
+                self.health_status = 'recovered'
                 
 
     def step(self) -> None:
@@ -61,22 +61,34 @@ class WorkerAgent(Agent):
             other.health += 1
             self.health -= 1
 
-def WorkerViz(agent):
-    """Sets the properties for each agent to show up with in the gui"""
-    if agent is None:
-        return
+def EnvironmentVisualization(agent):
+    """Sets the properties(qualities) for each agent to show up with in the gui
+    Also controls the visualization of the environment."""
+    if agent is None: # Doesn't work currently
+        center = agent.model.grid.width // 2 if agent and agent.model else 0
+        x = getattr(agent, 'pos', (0, 0))[0] if agent else 0
+        if x == center:
+            return {
+                "Shape": "rect",
+                "Color": "black",
+                "Filled": True,
+                "Layer": 1,
+                "w": 0.55,  #size of the line
+                "h": 1
+            }
+        return None
     
     qualities = {"Shape": "circle", "Filled": "true", "Layer": 0, "r":0.5}
     
     if agent.health_status == "healthy": 
-        qualities["Color"] == "green"
-        qualities["Layer"] == 1
+        qualities["Color"] = "green"
+        qualities["Layer"] = 1
     elif agent.health_status == "infected":
-        qualities["Color"] == "red"
-        qualities["Layer"] == 2
+        qualities["Color"] = "red"
+        qualities["Layer"] = 2
     elif agent.health_status == "recovered":
-        qualities["Color"] == "blue"
-        qualities["Layer"] == 3
+        qualities["Color"] = "blue"
+        qualities["Layer"] = 3
 
     return qualities
 
