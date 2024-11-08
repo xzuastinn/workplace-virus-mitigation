@@ -8,6 +8,8 @@
 
 `Server.py` is what runs the web simulation 
 
+'train.py' runs the DQN model; toggle for visualization and verbosity 
+
 ## Table of Contents
 
 - [Features](#features)
