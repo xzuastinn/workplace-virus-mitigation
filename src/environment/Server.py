@@ -1,7 +1,7 @@
 from mesa.visualization.modules import CanvasGrid
 from mesa.visualization.ModularVisualization import ModularServer
 #from mesa.visualization.UserParam import UserSettableParameter
-from WorkerModel import WorkerModel
+from environment.WorkerAgent import WorkerModel
 
 """Still need to setup https://mesa.readthedocs.io/stable/tutorials/visualization_tutorial.html"""
 
