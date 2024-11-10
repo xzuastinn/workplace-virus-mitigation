@@ -18,7 +18,7 @@ class factory_model(Model):
         self.num_vaccinated = 0
         self.productivity = 1.0
         self.current_reward = 0.0
-        self.visualization = visualization  # Assign the visualization flag
+        self.visualization = visualization
 
         self.initialize_agents()
         self.datacollector = DataCollector(
@@ -45,7 +45,7 @@ class factory_model(Model):
 
     def step(self, action=None):
         if self.visualization:
-            self.visualization_step()  # Call the simple step if in visualization mode
+            self.visualization_step()
         else:
             if action is not None:
                 self.apply_action(action)
@@ -59,17 +59,18 @@ class factory_model(Model):
             self.current_productivity = self.calculate_productivity()
 
             done = self.is_done()
-            return next_state, reward, done  # Return values only if not in visualization mode
+            return next_state, reward, done
       
     def visualization_step(self):
         """Advance the model one step without external actions (for visualization)."""
+        self.datacollector.collect(self)
+        self.schedule.step()
         reward = self.calculate_reward()
         self.current_reward += reward
         
         self.current_productivity = self.calculate_productivity()
         
-        self.datacollector.collect(self)
-        self.schedule.step()
+
 
     def apply_action(self, action):
         if action == 0:
@@ -86,29 +87,34 @@ class factory_model(Model):
         return [healthy, infected, recovered, self.num_vaccinated]
 
     def calculate_reward(self):
-        infection_reward = (self.count_health_status("healthy") / self.num_agents)
+        infection_reward = (self.count_health_status("healthy") + self.count_health_status("recovered") / self.num_agents)
         productivity_penalty = -0.1 * (self.mask_mandate + self.social_distancing)
         vaccination_reward = 0.05 * self.num_vaccinated
         employee_reward = 0.1 * self.num_agents
         return infection_reward + productivity_penalty + vaccination_reward + employee_reward
     
     def calculate_productivity(self):
-        """Calculate current productivity based on various factors"""
+        """Calculate current productivity based on various factors including recovered workers"""
         base_productivity = 1.0
         
-        # Productivity penalties
+        healthy_count = self.count_health_status("healthy")
+        recovered_count = self.count_health_status("recovered")
+        infected_count = self.count_health_status("infected")
+        
         if self.mask_mandate:
             base_productivity *= 0.95  # 5% reduction for mask mandate
         if self.social_distancing:
-            base_productivity *= 0.90  # 10% reduction for social distancing
+            base_productivity *= 0.8  # 20% reduction for social distancing
         
-        #Productivity mainly based on the ratio of healthy agents to sick
-        healthy_ratio = self.count_health_status("healthy") / self.num_agents
-        base_productivity *= healthy_ratio  
+        healthy_productivity = healthy_count
+        recovered_productivity = recovered_count * 0.95
+        infected_productivity = infected_count * 0.2
         
-        #Vaccines potentially cause productivity increase because workers not afraid of getting sick?
+        total_effective_workforce = (healthy_productivity + recovered_productivity + infected_productivity) / self.num_agents
+        base_productivity *= total_effective_workforce
+        
         vaccination_ratio = self.num_vaccinated / self.num_agents
-        base_productivity *= (1 + 0.05 * vaccination_ratio)  #Small bonus up to 5% 
+        base_productivity *= (1 + 0.05 * vaccination_ratio)
         
         return base_productivity
     

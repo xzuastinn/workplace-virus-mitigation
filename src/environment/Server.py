@@ -2,8 +2,6 @@ from mesa.visualization.modules import CanvasGrid, ChartModule
 from mesa.visualization.ModularVisualization import ModularServer
 from FactoryModel import factory_model
 
-"""Still need to setup https://mesa.readthedocs.io/stable/tutorials/visualization_tutorial.html"""
-
 def agent_portrayal(agent):
     """Defines how agents appear in the visualization."""
     portrayal = {"Shape": "circle", "Filled": "true", "r": 0.5}
@@ -25,7 +23,6 @@ GRID_HEIGHT = 25
 CANVAS_WIDTH = 350
 CANVAS_HEIGHT = 250
 
-# Set up the grid size and visualization
 grid = CanvasGrid(agent_portrayal, GRID_WIDTH, GRID_HEIGHT, CANVAS_WIDTH, CANVAS_HEIGHT)
 
 # Create the chart 
@@ -35,17 +32,21 @@ chart = ChartModule ([
         {"Label": "Recovered", "Color": "Blue"}
     ]
 )
+
 reward_chart = ChartModule([
     {"Label": "Total Reward", "Color": "Orange"}
 ])
+
 prod_chart = ChartModule([    
     {"Label": "Productivity", "Color": "Purple"},
 ])
+
 server = ModularServer(
     factory_model,
     [grid, chart, reward_chart, prod_chart],
     "Factory Infection Model",
-    {"width": GRID_WIDTH, "height": GRID_HEIGHT, "N": 75, "visualization": True}  # Model parameters: grid size and number of agents
+    {"width": GRID_WIDTH, "height": GRID_HEIGHT, "N": 90, "visualization": True}
 )
+
 server.port = 8511
 server.launch()
