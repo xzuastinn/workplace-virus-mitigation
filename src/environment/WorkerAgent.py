@@ -1,7 +1,7 @@
 from mesa import Agent
 import random 
 
-class WorkerAgent(Agent):
+class worker_agent(Agent):
     """A worker agent with a health status and a preferred side of the factory."""
     def __init__(self, unique_id, model, side):
         super().__init__(unique_id, model)
@@ -27,7 +27,7 @@ class WorkerAgent(Agent):
         if self.health_status == "infected":
             cellmates = self.model.grid.get_cell_list_contents([self.pos])
             for neighbor in cellmates:
-                if isinstance(neighbor, WorkerAgent) and neighbor.health_status == "healthy":
+                if isinstance(neighbor, worker_agent) and neighbor.health_status == "healthy":
                     # Determine infection probability based on whether the neighbor has had COVID
                     if neighbor.had_covid:
                         infection_probability = 0.25  # 25% chance if recovered
@@ -43,7 +43,7 @@ class WorkerAgent(Agent):
         """Update the health status of an infected worker over time."""
         if self.health_status == 'infected':
             self.infection_time += 1
-            if self.infection_time > 14:
+            if self.infection_time > 30:
                 self.health_status = 'recovered'
 
     def step(self):
@@ -52,5 +52,5 @@ class WorkerAgent(Agent):
         self.infection()
         if self.health_status == "infected":
             self.infection_time += 1
-            if self.infection_time > 14:
+            if self.infection_time > 21:
                 self.health_status = "recovered"

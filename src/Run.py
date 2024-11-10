@@ -1,6 +1,6 @@
-from mesa.visualization.modules import CanvasGrid
+from mesa.visualization.modules import CanvasGrid, ChartModule
 from mesa.visualization.ModularVisualization import ModularServer
-from environment.FactoryModel import FactoryModel
+from environment.FactoryModel import factory_model
 
 
 def agent_portrayal(agent):
@@ -19,17 +19,28 @@ def agent_portrayal(agent):
 
     return portrayal
 
-
+GRID_WIDTH = 50
+GRID_HEIGHT = 25
+CANVAS_WIDTH = 500
+CANVAS_HEIGHT = 250
 # Set up the grid size and visualization
-grid = CanvasGrid(agent_portrayal, 10, 10, 500, 500)
+grid = CanvasGrid(agent_portrayal, GRID_WIDTH, GRID_HEIGHT, CANVAS_WIDTH, CANVAS_HEIGHT)
 
+# Create the chart 
+chart = ChartModule = ( 
+    [
+        {"Label": "Healthy", "Color": "Green"},
+        {"Label": "Infected", "Color": "Red"},
+        {"Label": "Recovered", "Color": "Blue"}
+    ]
+)
 
 # Create a server for the model
 server = ModularServer(
-    FactoryModel,
-    [grid],
+    factory_model,
+    [grid, chart],
     "Factory Infection Model",
-    {"width": 10, "height": 10, "N": 10}  # Model parameters: grid size and number of agents
+    {"width": GRID_WIDTH, "height": GRID_HEIGHT, "N": 75}  # Model parameters: grid size and number of agents
 )
 
 # Launch the server to visualize the environment

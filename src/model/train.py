@@ -1,5 +1,5 @@
 import numpy as np
-from environment.FactoryModel import FactoryModel
+from environment.FactoryModel import factory_model
 from model.dqn_agent import DQNAgent
 
 from mesa.visualization.modules import CanvasGrid
@@ -29,7 +29,7 @@ def agent_portrayal(agent):
 def start_visualization():
     grid = CanvasGrid(agent_portrayal, 20, 10, 500, 250)
     server = ModularServer(
-        FactoryModel,
+        factory_model,
         [grid],
         "Factory Infection Model",
         {"width": 20, "height": 10, "N": 50, "visualization": True}  # Enable visualization mode
@@ -53,7 +53,7 @@ def run_training():
 
     # Training loop
     for episode in range(num_episodes):
-        env = FactoryModel(width=20, height=10, N=50)
+        env = factory_model(width=20, height=10, N=50)
         state = env.get_state()
         total_reward = 0
 
