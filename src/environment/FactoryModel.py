@@ -3,7 +3,7 @@ from mesa import Model
 from mesa.space import MultiGrid
 from mesa.time import RandomActivation
 from mesa.datacollection import DataCollector
-from WorkerAgent import worker_agent
+from .WorkerAgent import worker_agent
 
 class factory_model(Model):
     """Factory environment where WorkerAgents interact."""

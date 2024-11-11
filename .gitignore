@@ -1,1 +1,3 @@
 __pycache__/
+build/
+src/factory_infection_model.egg-info/
