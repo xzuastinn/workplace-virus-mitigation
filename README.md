@@ -49,9 +49,15 @@ conda activate virus_sim
 ```
 
 2. Install required packages:
+```bash 
+pip install -e .
+```
+OR 
+
 ```bash
 pip install -r requirements.txt
 ```
+Would suggest using the first option as it is easier to manage dependencies.
 
 Note: If you encounter any issues with the installation, make sure your conda and pip are up to date:
 ```bash
