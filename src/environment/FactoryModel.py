@@ -213,14 +213,14 @@ class factory_model(Model):
 
         if self.current_step_in_day == self.next_shift_change:
             self.process_shift_change()
-            for agent in self.schedule.agents:
-                if self.social_distancing and agent.pos is not None:
-                    if self.schedule.steps % 3 == 0:  # Move only every 3 steps
-                        possible_moves = self.grid.get_neighborhood(agent.pos, moore=True, radius=1)
-                        valid_moves = [pos for pos in possible_moves if pos is not None and self.is_position_clear(pos)]
-                        if valid_moves:
-                            new_pos = random.choice(valid_moves)
-                            self.grid.move_agent(agent, new_pos)
+
+        for agent in self.schedule.agents:
+            if self.social_distancing and agent.pos is not None:
+                possible_moves = self.grid.get_neighborhood(agent.pos, moore=True, radius=1)
+                valid_moves = [pos for pos in possible_moves if pos is not None and self.is_position_clear(pos)]
+                if valid_moves:
+                    new_pos = random.choice(valid_moves)
+                    self.grid.move_agent(agent, new_pos)
             else:
                 self.schedule.step()
 
