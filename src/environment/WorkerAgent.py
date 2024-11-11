@@ -13,7 +13,7 @@ class worker_agent(Agent):
         self.steps_since_base_change = 0
         self.mask = False
         self.social_distance = 0 
-        self.base_change_frequency = 12
+        self.is_quarantined = False
     
     def get_section_bounds(self):
         """Get the boundaries of the agent's assigned section"""
@@ -61,14 +61,13 @@ class worker_agent(Agent):
     
     def move(self):
         """Move within the 3x3 grid around base position."""
+        if self.is_quarantined:
+            return
+        
         if self.base_position is None:
             self.set_base_position(self.pos)
             
         self.steps_since_base_change += 1
-        
-        if self.steps_since_base_change >= self.base_change_frequency:
-            self.update_base_position()
-            return
             
         possible_moves = self.get_valid_3x3_positions()
         
@@ -135,8 +134,9 @@ class worker_agent(Agent):
 
     def step(self):
         """Define agent's behavior per step."""
-        self.move()
-        self.infection()
+        if not self.is_quarantined:
+            self.move()
+            self.infection()
         if self.health_status == "infected":
             self.infection_time += 1
             self.had_covid = True
