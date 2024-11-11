@@ -1,11 +1,11 @@
 from mesa import Agent
-import random 
+import random
 
 class worker_agent(Agent):
-    """A worker agent with a health status and a preferred side of the factory."""
-    def __init__(self, unique_id, model, side):
+    """A worker agent with a health status and assigned section."""
+    def __init__(self, unique_id, model, section):
         super().__init__(unique_id, model)
-        self.side = side
+        self.section = section
         self.health_status = "healthy"
         self.infection_time = 0
         self.had_covid = False
@@ -13,6 +13,16 @@ class worker_agent(Agent):
         self.steps_since_base_change = 0
         self.mask = False
         self.social_distance = 0 
+        self.base_change_frequency = 12
+    
+    def get_section_bounds(self):
+        """Get the boundaries of the agent's assigned section"""
+        section_num = int(self.section.split('_')[1])
+        num_sections = 2 ** self.model.splitting_level if self.model.splitting_level > 0 else 1
+        section_width = self.model.grid.width // num_sections
+        x_start = section_num * section_width
+        x_end = (section_num + 1) * section_width
+        return x_start, x_end
     
     def set_base_position(self, pos):
         """Set the initial base position for the worker."""
@@ -25,6 +35,7 @@ class worker_agent(Agent):
             
         base_x, base_y = self.base_position
         possible_positions = []
+        x_start, x_end = self.get_section_bounds()
         
         for dx in [-1, 0, 1]:
             for dy in [-1, 0, 1]:
@@ -32,21 +43,16 @@ class worker_agent(Agent):
                 new_y = base_y + dy
                 
                 if (0 <= new_x < self.model.grid.width and 
-                    0 <= new_y < self.model.grid.height):
-                    
-                    if ((self.side == 'left' and new_x < self.model.central_line) or
-                        (self.side == 'right' and new_x >= self.model.central_line)):
-                        possible_positions.append((new_x, new_y))
+                    0 <= new_y < self.model.grid.height and
+                    x_start <= new_x < x_end):
+                    possible_positions.append((new_x, new_y))
                         
         return possible_positions
         
     def update_base_position(self):
-        """Update the base position after 24 steps."""
-        if self.side == 'left':
-            new_x = self.random.randrange(self.model.central_line)
-        else:
-            new_x = self.random.randrange(self.model.central_line, self.model.grid.width)
-            
+        """Update the base position after n steps."""
+        x_start, x_end = self.get_section_bounds()
+        new_x = self.random.randrange(x_start, x_end)
         new_y = self.random.randrange(self.model.grid.height)
         self.base_position = (new_x, new_y)
         self.steps_since_base_change = 0
@@ -59,7 +65,8 @@ class worker_agent(Agent):
             self.set_base_position(self.pos)
             
         self.steps_since_base_change += 1
-        if self.steps_since_base_change >= 24:
+        
+        if self.steps_since_base_change >= self.base_change_frequency:
             self.update_base_position()
             return
             
@@ -70,16 +77,7 @@ class worker_agent(Agent):
             self.model.grid.move_agent(self, new_position)
 
     def get_infection_probability(self, distance, had_covid):
-        """
-        Calculate infection probability based on distance and immunity status.
-        
-        Args:
-            distance (int): Distance from infected agent (0 = same cell, 1-3 = radius)
-            had_covid (bool): Whether the potential infectee has had COVID before
-        
-        Returns:
-            float: Probability of infection
-        """
+        """Calculate infection probability based on distance and immunity status."""
         base_probabilities = {
             0: 0.2,  # Same cell
             1: 0.1,  # Adjacent cells
@@ -107,12 +105,15 @@ class worker_agent(Agent):
         """Spread infection based on proximity with radius-based probability."""
         if self.health_status == "infected":
             x, y = self.pos
+            x_start, x_end = self.get_section_bounds()
+            
             for dx in range(-3, 4):
                 for dy in range(-3, 4):
                     target_pos = (x + dx, y + dy)
                     
                     if (0 <= target_pos[0] < self.model.grid.width and 
-                        0 <= target_pos[1] < self.model.grid.height):
+                        0 <= target_pos[1] < self.model.grid.height and
+                        x_start <= target_pos[0] < x_end):
                         
                         distance = self.get_manhattan_distance(self.pos, target_pos)
                         
@@ -128,7 +129,6 @@ class worker_agent(Agent):
                                         agent.had_covid
                                     )
                                     
-                                    # Attempt infection
                                     if random.random() < infection_prob:
                                         agent.health_status = "infected"
                                         agent.had_covid = True
@@ -142,3 +142,6 @@ class worker_agent(Agent):
             self.had_covid = True
             if self.infection_time > 30:
                 self.health_status = "recovered"
+                if self.infection_time > 100: # allow for reinfections
+                    self.health_status = "healthy"
+                    self.infection_time = 0

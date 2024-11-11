@@ -41,9 +41,12 @@ prod_chart = ChartModule([
     {"Label": "Productivity", "Color": "Purple"},
 ])
 
+daily_infections_chart = ChartModule([
+    {"Label": "Daily Infections", "Color": "Red"}
+], data_collector_name='datacollector')
 server = ModularServer(
     factory_model,
-    [grid, chart, reward_chart, prod_chart],
+    [grid, chart, reward_chart, prod_chart, daily_infections_chart],
     "Factory Infection Model",
     {"width": GRID_WIDTH, "height": GRID_HEIGHT, "N": 90, "visualization": True}
 )
