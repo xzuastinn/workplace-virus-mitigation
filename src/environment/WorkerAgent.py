@@ -98,7 +98,16 @@ class worker_agent(Agent):
             base_prob *= 0.8  # Social distancing reduces transmission by 20%
             
         return base_prob
-    
+    def update_infection(self):
+        if self.health_status == "infected":
+            self.infection_time += 1
+            self.had_covid = True
+            if self.infection_time > 30:
+                self.health_status = "recovered"
+                if self.infection_time > 100: # reinfections
+                    self.health_status = "healthy"
+                    self.infection_time = 0
+
     def update_production(self):
         """Update agent's current production based on various factors."""
         production = self.base_production
@@ -164,12 +173,5 @@ class worker_agent(Agent):
         if not self.is_quarantined:
             self.move()
             self.infection()
-        if self.health_status == "infected":
-            self.infection_time += 1
-            self.had_covid = True
-            if self.infection_time > 30:
-                self.health_status = "recovered"
-                if self.infection_time > 100: # allow for reinfections
-                    self.health_status = "healthy"
-                    self.infection_time = 0
+        self.update_infection()
         self.update_production()
