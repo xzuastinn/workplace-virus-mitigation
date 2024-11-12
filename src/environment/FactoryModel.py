@@ -16,7 +16,7 @@ class factory_model(Model):
 
         # Quarantine 
         self.quarantine_zone = []
-        self.quarantine_threshold = 12 # 12 steps of having an infection before 
+        self.quarantine_threshold = 20 # n steps of having an infection before 
         
         # Reinforcement learning parameters
         self.mask_mandate = False
@@ -224,18 +224,18 @@ class factory_model(Model):
             else:
                 self.schedule.step()
 
-        current_infected = self.count_health_status("infected")
-        new_infections = max(0, current_infected - self.previous_infected_count)
-        self.daily_infections += new_infections
-        self.previous_infected_count = current_infected
+        pre_step_infected = self.count_health_status("infected")
+        self.schedule.step()
+        
+        post_step_infected = self.count_health_status("infected")
+        new_infections = max(0, post_step_infected - pre_step_infected)
 
         if self.current_step_in_day == self.steps_per_day - 1:
             self.process_day_end()
 
         self.datacollector.collect(self)
-        self.schedule.step()
 
-        reward = self.calculate_reward() - action_cost
+        reward = self.calculate_reward(new_infections) - action_cost
         self.current_reward = reward
         self.cumulative_reward += reward
 
@@ -244,10 +244,13 @@ class factory_model(Model):
             done = self.is_done()
             info = {
                 'day': self.current_day,
-                'daily_infections': self.daily_infections,
+                'step_in_day': self.current_step_in_day,
+                'new_infections': new_infections,
                 'productivity': self.calculate_productivity(),
                 'quarantined': len(self.quarantine_zone),
-                'action_cost': action_cost
+                'action_cost': action_cost,
+                'base_production': self.calculate_productivity() * 2.0,
+                'infection_penalty': -1.0 * (new_infections / self.num_agents)
             }
             return next_state, reward, done, info
 
@@ -261,7 +264,8 @@ class factory_model(Model):
             'healthy': self.count_health_status("healthy"),
             'infected': self.count_health_status("infected"),
             'recovered': self.count_health_status("recovered"),
-            'productivity': self.calculate_productivity()
+            'productivity': self.calculate_productivity(),
+            'cumulative_reward': self.cumulative_reward
         })
         self.daily_infections = 0
 
@@ -324,17 +328,21 @@ class factory_model(Model):
         recovered = self.count_health_status("recovered")
         return [healthy, infected, recovered, self.num_vaccinated]
 
-    def calculate_reward(self):
-        """Calculate reward with penalties for new infections"""
-        working_agents = self.count_health_status("healthy") + self.count_health_status("recovered")
-        base_reward = (working_agents / self.num_agents)
+    def calculate_reward(self, new_infections):
+        """
+        Calculate reward based on current production and new infections this step
         
-        infection_penalty = -0.5 * (self.daily_infections / self.num_agents)
+        Args:
+            new_infections (int): Number of new infections in this step
+        """
+        productivity = self.calculate_productivity()
+        base_reward = productivity * 2.0
         
-        policy_penalty = -0.1 * (self.mask_mandate + self.social_distancing)
-        vaccination_bonus = 0.05 * (self.num_vaccinated / self.num_agents)
-        productivity = self.calculate_productivity() * 0.5
-        return base_reward + infection_penalty + policy_penalty + vaccination_bonus + productivity
+        infection_penalty = -2.0 * (new_infections / self.num_agents)
+        
+        total_reward = base_reward + infection_penalty
+        
+        return total_reward
     
     def calculate_productivity(self):
         """Calculate current productivity based on individual agent productions"""

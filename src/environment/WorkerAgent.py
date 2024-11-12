@@ -102,7 +102,7 @@ class worker_agent(Agent):
         if self.health_status == "infected":
             self.infection_time += 1
             self.had_covid = True
-            if self.infection_time > 30:
+            if self.infection_time > 40:
                 self.health_status = "recovered"
                 if self.infection_time > 100: # reinfections
                     self.health_status = "healthy"
