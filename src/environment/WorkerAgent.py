@@ -14,6 +14,9 @@ class worker_agent(Agent):
         self.mask = False
         self.social_distance = 0 
         self.is_quarantined = False
+        self.base_production = random.uniform(0.9, 1.1)
+        self.current_production = self.base_production
+
     
     def get_section_bounds(self):
         """Get the boundaries of the agent's assigned section"""
@@ -95,6 +98,30 @@ class worker_agent(Agent):
             base_prob *= 0.8  # Social distancing reduces transmission by 20%
             
         return base_prob
+    
+    def update_production(self):
+        """Update agent's current production based on various factors."""
+        production = self.base_production
+
+        if self.health_status == "healthy":
+            production = self.base_production
+        elif self.health_status == "infected":
+            production *= 0.2
+        elif self.health_status == "recovered":
+            production *= 0.95 
+
+        if self.model.mask_mandate:
+            production *= 0.95 
+        if self.model.social_distancing:
+            production *= 0.90  
+
+        if self.unique_id < self.model.num_vaccinated:
+            production *= 1.05 
+
+        if self.is_quarantined:
+            production = 0
+
+        self.current_production = production
 
     def get_manhattan_distance(self, pos1, pos2):
         """Calculate Manhattan distance between two positions."""
@@ -145,3 +172,4 @@ class worker_agent(Agent):
                 if self.infection_time > 100: # allow for reinfections
                     self.health_status = "healthy"
                     self.infection_time = 0
+        self.update_production()

@@ -337,29 +337,10 @@ class factory_model(Model):
         return base_reward + infection_penalty + policy_penalty + vaccination_bonus + productivity
     
     def calculate_productivity(self):
-        """Calculate current productivity based on various factors including recovered workers"""
-        base_productivity = 1.0
-        
-        healthy_count = self.count_health_status("healthy")
-        recovered_count = self.count_health_status("recovered")
-        infected_count = self.count_health_status("infected")
-        
-        if self.mask_mandate:
-            base_productivity *= 0.95  # 5% reduction for mask mandate
-        if self.social_distancing:
-            base_productivity *= 0.90  # 10% reduction for social distancing
-        
-        healthy_productivity = healthy_count
-        recovered_productivity = recovered_count * 0.95  # Recovered work
-        infected_productivity = infected_count * 0.2    # Infected workers at 20% productivity
-        
-        total_effective_workforce = (healthy_productivity + recovered_productivity + infected_productivity) / self.num_agents
-        base_productivity *= total_effective_workforce
-        
-        vaccination_ratio = self.num_vaccinated / self.num_agents
-        base_productivity *= (1 + 0.05 * vaccination_ratio)
-        
-        return base_productivity
+        """Calculate current productivity based on individual agent productions"""
+        total_production = sum(agent.current_production for agent in self.schedule.agents)
+        #normalized_productivity = total_production / self.num_agents
+        return total_production
     
     def count_health_status(self, status):
         return sum(1 for agent in self.schedule.agents if agent.health_status == status)
