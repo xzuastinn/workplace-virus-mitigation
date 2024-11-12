@@ -16,6 +16,8 @@ class worker_agent(Agent):
         self.is_quarantined = False
         self.base_production = random.uniform(0.9, 1.1)
         self.current_production = self.base_production
+        self.confined_to_3x3 = False
+        self.confined_steps = 0
 
     
     def get_section_bounds(self):
@@ -31,26 +33,16 @@ class worker_agent(Agent):
         """Set the initial base position for the worker."""
         self.base_position = pos
         
-    def get_valid_3x3_positions(self):
-        """Get all valid positions within the 3x3 grid centered on base_position."""
-        if not self.base_position:
-            return []
-            
-        base_x, base_y = self.base_position
-        possible_positions = []
+    def get_valid_positions(self):
+        """Get all valid positions on the grid within the agent's section"""
         x_start, x_end = self.get_section_bounds()
+        valid_positions = [(x, y) for x in range(x_start, x_end) for y in range(self.model.grid.height)]
         
-        for dx in [-1, 0, 1]:
-            for dy in [-1, 0, 1]:
-                new_x = base_x + dx
-                new_y = base_y + dy
-                
-                if (0 <= new_x < self.model.grid.width and 
-                    0 <= new_y < self.model.grid.height and
-                    x_start <= new_x < x_end):
-                    possible_positions.append((new_x, new_y))
-                        
-        return possible_positions
+        if self.confined_to_3x3:
+            x, y = self.base_position
+            valid_positions = [(x+dx, y+dy) for dx in range(-1, 2) for dy in range(-1, 2)]
+        
+        return valid_positions
         
     def update_base_position(self):
         """Update the base position after n steps."""
@@ -59,24 +51,39 @@ class worker_agent(Agent):
         new_y = self.random.randrange(self.model.grid.height)
         self.base_position = (new_x, new_y)
         self.steps_since_base_change = 0
-        
+        self.confined_to_3x3 = True
+        self.confined_steps = 0
+
         self.model.grid.move_agent(self, self.base_position)
     
     def move(self):
-        """Move within the 3x3 grid around base position."""
+        """Move the agent to a random valid position on the grid."""
         if self.is_quarantined:
             return
-        
+
         if self.base_position is None:
             self.set_base_position(self.pos)
-            
+
         self.steps_since_base_change += 1
-            
-        possible_moves = self.get_valid_3x3_positions()
-        
-        if possible_moves:
-            new_position = self.random.choice(possible_moves)
-            self.model.grid.move_agent(self, new_position)
+
+        if self.steps_since_base_change > 5:
+            self.update_base_position()
+
+        valid_positions = self.get_valid_positions()
+        new_position = random.choice(valid_positions)
+        self.model.grid.move_agent(self, new_position)
+
+        if self.confined_to_3x3:
+            self.confined_steps += 1
+            if self.confined_steps > 10:
+                x_start, x_end = self.get_section_bounds()
+                new_x = random.randrange(x_start, x_end)
+                new_y = random.randrange(self.model.grid.height)
+                self.base_position = (new_x, new_y)
+                self.confined_to_3x3 = True
+                self.confined_steps = 0
+        else:
+            self.update_base_position()
 
     def get_infection_probability(self, distance, had_covid):
         """Calculate infection probability based on distance and immunity status."""

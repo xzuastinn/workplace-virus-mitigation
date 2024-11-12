@@ -20,9 +20,9 @@ class factory_model(Model):
         
         # Reinforcement learning parameters
         self.mask_mandate = False
-        self.social_distancing = True
+        self.social_distancing = False
         self.num_vaccinated = 0
-        self.splitting_level = 3 # 0 no grid splitting, 1 half, 2 quarter, 3 eights
+        self.splitting_level = 0 # 0 no grid splitting, 1 half, 2 quarter, 3 eights
         self.splitting_costs = {0: 0.0, 1: 0.1, 2: 0.2, 3: 0.3}
         self.section_boundaries = []
         
@@ -72,6 +72,8 @@ class factory_model(Model):
                 7 * self.grid.width // 8
             ])  # Eighths
         self.section_boundaries = sorted(list(set(self.section_boundaries))) 
+    def get_steps_per_shift(self):
+        return self.steps_per_shift
     
     def get_section_index(self, x_coord):
         """Determine which section an x-coordinate falls into"""
@@ -97,40 +99,24 @@ class factory_model(Model):
             return False
         neighbors = self.grid.get_neighbors(pos, moore=True, radius=1, include_center=False)
         return len(neighbors) == 0
-    
+        
     def process_shift_change(self):
-        """Handle the shift change by redistributing workers within their sections"""
+        """Handle the shift change by redistributing workers within the grid"""
         self.current_shift = (self.current_shift + 1) % self.shifts_per_day
-        num_sections = 2 ** self.splitting_level if self.splitting_level > 0 else 1
-    
-        agents_by_section = {i: [] for i in range(num_sections)}
-    
-        active_agents = [agent for agent in self.schedule.agents if not agent.is_quarantined]
-    
-        for agent in active_agents:
-            section = self.get_section_index(agent.pos[0])
-            agents_by_section[section].append(agent)
-    
-        for section_idx in range(num_sections):
-            x_start, x_end = self.get_section_bounds(section_idx)
-            section_agents = agents_by_section[section_idx]
-        
-            positions = [(x, y) for x in range(x_start, x_end) 
-                            for y in range(self.grid.height)]
-            self.random.shuffle(positions)
-        
-            for agent in section_agents:
-                if positions:
-                    if self.social_distancing:
-                        new_pos = positions.pop()
-                        if new_pos != agent.pos:
-                            self.grid.move_agent(agent, new_pos)
-                            agent.set_base_position(new_pos)
-                            agent.steps_since_base_change = 0
 
-        self.next_shift_change = (
-            self.current_step_in_day + self.steps_per_shift
-        ) % self.steps_per_day
+        active_agents = [agent for agent in self.schedule.agents if not agent.is_quarantined]
+        all_positions = [(x, y) for x in range(self.grid.width) for y in range(self.grid.height)]
+        self.random.shuffle(all_positions)
+
+        for agent in active_agents:
+            if all_positions:
+                new_pos = all_positions.pop()
+                if new_pos != agent.pos:
+                    self.grid.move_agent(agent, new_pos)
+                    agent.set_base_position(new_pos)
+                    agent.steps_since_base_change = 0
+
+        self.next_shift_change = (self.current_step_in_day + self.steps_per_shift) % self.steps_per_day
         
     def return_from_quarantine(self, agent):
         """Return agent from quarantine to a random valid position"""
@@ -179,24 +165,19 @@ class factory_model(Model):
         first_infections = random.randrange(self.num_agents)
         num_sections = 2 ** self.splitting_level if self.splitting_level > 0 else 1
 
+        all_positions = [(x, y) for x in range(self.grid.width) for y in range(self.grid.height)]
+        self.random.shuffle(all_positions)
+
         for i in range(self.num_agents):
-            section = random.randrange(num_sections)
-            worker = worker_agent(i, self, f'section_{section}')
+            worker = worker_agent(i, self, f'section_{i // (self.num_agents // num_sections)}')
             if i == first_infections:
                 worker.health_status = "infected"
 
             self.schedule.add(worker)
-
-            section_width = self.grid.width // num_sections
-            x_start = section * section_width
-            x_end = (section + 1) * section_width
-            
-            x = self.random.randrange(x_start, x_end)
-            y = self.random.randrange(self.grid.height)
-            
-            pos = (x, y)
+            pos = all_positions.pop()
             self.grid.place_agent(worker, pos)
             worker.set_base_position(pos)
+
         self.previous_infected_count = self.count_health_status("infected")
 
     def step(self, action=None):
@@ -214,21 +195,21 @@ class factory_model(Model):
         if self.current_step_in_day == self.next_shift_change:
             self.process_shift_change()
 
+        pre_step_infected = self.count_health_status("infected")
+        
         for agent in self.schedule.agents:
             if self.social_distancing and agent.pos is not None:
                 possible_moves = self.grid.get_neighborhood(agent.pos, moore=True, radius=1)
-                valid_moves = [pos for pos in possible_moves if pos is not None and self.is_position_clear(pos)]
+                valid_moves = [pos for pos in possible_moves if pos is not None]
                 if valid_moves:
                     new_pos = random.choice(valid_moves)
                     self.grid.move_agent(agent, new_pos)
-            else:
-                self.schedule.step()
+            agent.step()
 
-        pre_step_infected = self.count_health_status("infected")
-        self.schedule.step()
-        
         post_step_infected = self.count_health_status("infected")
+        
         new_infections = max(0, post_step_infected - pre_step_infected)
+        self.daily_infections += new_infections
 
         if self.current_step_in_day == self.steps_per_day - 1:
             self.process_day_end()
@@ -246,11 +227,12 @@ class factory_model(Model):
                 'day': self.current_day,
                 'step_in_day': self.current_step_in_day,
                 'new_infections': new_infections,
+                'total_infected': post_step_infected,
                 'productivity': self.calculate_productivity(),
                 'quarantined': len(self.quarantine_zone),
                 'action_cost': action_cost,
                 'base_production': self.calculate_productivity() * 2.0,
-                'infection_penalty': -1.0 * (new_infections / self.num_agents)
+                'infection_penalty': -2.0 * (new_infections / self.num_agents)
             }
             return next_state, reward, done, info
 
@@ -278,6 +260,15 @@ class factory_model(Model):
 
         if self.schedule.steps % self.steps_per_day == 0:
             self.process_day_end()
+
+        for agent in self.schedule.agents:
+            if self.social_distancing and agent.pos is not None:
+                possible_moves = self.grid.get_neighborhood(agent.pos, moore=True, radius=1)
+                valid_moves = [pos for pos in possible_moves if pos is not None]
+                if valid_moves:
+                    new_pos = random.choice(valid_moves)
+                    self.grid.move_agent(agent, new_pos)
+            agent.step()
 
         reward = self.calculate_reward()
         self.current_reward += reward 
