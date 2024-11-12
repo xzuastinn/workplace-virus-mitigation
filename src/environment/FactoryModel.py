@@ -20,9 +20,9 @@ class factory_model(Model):
         
         # Reinforcement learning parameters
         self.mask_mandate = False
-        self.social_distancing = False
+        self.social_distancing = True
         self.num_vaccinated = 0
-        self.splitting_level = 0 # 0 no grid splitting, 1 half, 2 quarter, 3 eights
+        self.splitting_level = 2 # 0 no grid splitting, 1 half, 2 quarter, 3 eights
         self.splitting_costs = {0: 0.0, 1: 0.1, 2: 0.2, 3: 0.3}
         self.section_boundaries = []
         

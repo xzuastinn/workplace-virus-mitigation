@@ -19,7 +19,6 @@ class worker_agent(Agent):
         self.confined_to_3x3 = False
         self.confined_steps = 0
 
-    
     def get_section_bounds(self):
         """Get the boundaries of the agent's assigned section"""
         section_num = int(self.section.split('_')[1])
@@ -28,22 +27,22 @@ class worker_agent(Agent):
         x_start = section_num * section_width
         x_end = (section_num + 1) * section_width
         return x_start, x_end
-    
+
     def set_base_position(self, pos):
         """Set the initial base position for the worker."""
         self.base_position = pos
-        
+
     def get_valid_positions(self):
         """Get all valid positions on the grid within the agent's section"""
         x_start, x_end = self.get_section_bounds()
         valid_positions = [(x, y) for x in range(x_start, x_end) for y in range(self.model.grid.height)]
-        
+
         if self.confined_to_3x3:
             x, y = self.base_position
             valid_positions = [(x+dx, y+dy) for dx in range(-1, 2) for dy in range(-1, 2)]
-        
+
         return valid_positions
-        
+
     def update_base_position(self):
         """Update the base position after n steps."""
         x_start, x_end = self.get_section_bounds()
@@ -55,7 +54,7 @@ class worker_agent(Agent):
         self.confined_steps = 0
 
         self.model.grid.move_agent(self, self.base_position)
-    
+
     def move(self):
         """Move the agent to a random valid position on the grid."""
         if self.is_quarantined:
@@ -66,8 +65,10 @@ class worker_agent(Agent):
 
         self.steps_since_base_change += 1
 
-        if self.steps_since_base_change > 5:
+        if self.steps_since_base_change > self.model.get_steps_per_shift():
             self.update_base_position()
+            self.confined_to_3x3 = False
+            self.confined_steps = 0
 
         valid_positions = self.get_valid_positions()
         new_position = random.choice(valid_positions)
@@ -75,7 +76,7 @@ class worker_agent(Agent):
 
         if self.confined_to_3x3:
             self.confined_steps += 1
-            if self.confined_steps > 10:
+            if self.confined_steps > self.model.get_steps_per_shift():
                 x_start, x_end = self.get_section_bounds()
                 new_x = random.randrange(x_start, x_end)
                 new_y = random.randrange(self.model.grid.height)
