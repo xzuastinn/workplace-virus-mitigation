@@ -15,7 +15,7 @@ class worker_agent(Agent):
         self.is_quarantined = False
         self.base_production = random.uniform(0.9, 1.1)
         self.current_production = self.base_production
-        self.confined_to_3x3 = False
+        self.confined_to_2x2 = False
         self.confined_steps = 0
         self.base_position = None
         self.steps_since_base_change = 0
@@ -32,32 +32,37 @@ class worker_agent(Agent):
     def set_base_position(self, pos):
         """Set the initial base position for the worker."""
         self.base_position = pos
+        self.confined_to_2x2 = True
+        self.confined_steps = 0
+
 
     def get_valid_positions(self):
-        """Get all valid positions on the grid within the agent's section"""
+        """Get all valid positions on the grid within the agent's 2x2 section"""
         x_start, x_end = self.get_section_bounds()
         
-        if self.confined_to_3x3 and self.base_position is not None:
+        if self.base_position is None:
+            self.set_base_position((x_start, 0))
+            
+        if self.confined_to_2x2:
             x, y = self.base_position
             valid_positions = [
-                (x+dx, y+dy) for dx in range(-1, 2) for dy in range(-1, 2)
-                if (0 <= x+dx < self.model.grid.width and 
-                    0 <= y+dy < self.model.grid.height and
-                    x_start <= x+dx < x_end)
+                (x+dx, y+dy) for dx in range(0, 2) for dy in range(0, 2)
+                if (x_start <= x+dx < x_end and
+                    0 <= y+dy < self.model.grid.height)
             ]
             return valid_positions
         
-        return [(x, y) for x in range(x_start, x_end) 
-                for y in range(self.model.grid.height)]
-
+        return [(x, y) for x in range(x_start, x_end, 2) 
+                for y in range(self.model.grid.height) if y % 2 == 0]
+    
     def update_base_position(self):
         """Update the base position after n steps."""
         x_start, x_end = self.get_section_bounds()
-        new_x = self.random.randrange(x_start, x_end)
-        new_y = self.random.randrange(self.model.grid.height)
+        new_x = self.random.randrange(x_start, x_end, 2)
+        new_y = self.random.randrange(0, self.model.grid.height, 2)
         self.base_position = (new_x, new_y)
         self.steps_since_base_change = 0
-        self.confined_to_3x3 = True
+        self.confined_to_2x2 = True
         self.confined_steps = 0
 
         self.model.grid.move_agent(self, self.base_position)

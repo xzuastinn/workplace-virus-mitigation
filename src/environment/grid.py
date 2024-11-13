@@ -4,7 +4,7 @@ import random
 class GridManager:
     def __init__(self, model):
         self.model = model
-        self.splitting_level = 0 # 0 full grid, 1 half, 2 quarter, 3 eights
+        self.splitting_level = 3 # 0 full grid, 1 half, 2 quarter, 3 eights
         self.splitting_costs = {0: 0.0, 1: 0.1, 2: 0.2, 3: 0.3}
         self.section_boundaries = []
         self.update_section_boundaries()
@@ -62,21 +62,32 @@ class GridManager:
             
     def process_shift_change(self):
         self.model.current_shift = (self.model.current_shift + 1) % self.model.shifts_per_day
-        
-        active_agents = [agent for agent in self.model.schedule.agents 
-                        if not agent.is_quarantined]
-        positions = self.get_random_positions(len(active_agents))
-        
-        for agent, new_pos in zip(active_agents, positions):
-            if new_pos != agent.pos:
-                self.model.grid.move_agent(agent, new_pos)
-                agent.set_base_position(new_pos)
-                agent.steps_since_base_change = 0
-                
-        self.model.next_shift_change = ((self.model.current_step_in_day + 
-                                       self.model.steps_per_shift) % 
-                                      self.model.steps_per_day)
-                                      
+
+        active_agents = [agent for agent in self.model.schedule.agents if not agent.is_quarantined]
+
+        # Create a list of all occupied positions
+        occupied_positions = [agent.pos for agent in active_agents]
+
+        for agent in active_agents:
+            section_start, section_end = agent.get_section_bounds()
+            new_x = self.model.random.randrange(section_start, section_end)
+            new_y = self.model.random.randrange(self.model.grid.height)
+            new_pos = (new_x, new_y)
+
+            # Check if the new position is at least 1 block away from any other agent
+            if all(self.get_manhattan_distance(new_pos, pos) > 1 for pos in occupied_positions):
+                if new_pos != agent.pos:
+                    self.model.grid.move_agent(agent, new_pos)
+                    agent.set_base_position(new_pos)
+                    agent.steps_since_base_change = 0
+                    occupied_positions.append(new_pos)
+            else:
+                # If the agent can't be placed, remove it from the model
+                self.model.grid.remove_agent(agent)
+                self.model.schedule.remove(agent)
+
+        self.model.next_shift_change = ((self.model.current_step_in_day + self.model.steps_per_shift) % self.model.steps_per_day)
+                                        
     def apply_action(self, action):
         action_cost = 0
         if action == 0:

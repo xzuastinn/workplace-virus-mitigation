@@ -24,31 +24,30 @@ class factory_model(Model):
         
         # Policy parameters
         self.mask_mandate = False
-        self.social_distancing = False
+        self.social_distancing = True
         self.num_vaccinated = 0
         
         # Time parameters
         self.steps_per_day = 24
         self.shifts_per_day = 3
         self.steps_per_shift = self.steps_per_day // self.shifts_per_day
-        self.current_shift = 0
         self.next_shift_change = self.steps_per_shift
         
         self.initialize_agents()
         self.initialize_datacollector()
-
+        
     def initialize_agents(self):
         first_infection = random.randrange(self.num_agents)
         positions = self.grid_manager.get_random_positions(self.num_agents)
         num_sections = 2 ** self.grid_manager.splitting_level if self.grid_manager.splitting_level > 0 else 1
-        
+
         for i in range(self.num_agents):
             section = f'section_{i // (self.num_agents // num_sections)}'
             worker = worker_agent(i, self, section)
-            
+
             if i == first_infection:
                 worker.health_status = "infected"
-            
+
             self.schedule.add(worker)
             pos = positions[i]
             self.grid.place_agent(worker, pos)
