@@ -7,6 +7,7 @@ from WorkerAgent import worker_agent
 from Quarantine import QuarantineManager
 from grid import GridManager
 from Stats import StatsCollector
+from Testing import TestingManager
 
 class factory_model(Model):
     def __init__(self, width, height, N, visualization=False):
@@ -21,11 +22,13 @@ class factory_model(Model):
         self.quarantine = QuarantineManager(self)
         self.grid_manager = GridManager(self)
         self.stats = StatsCollector(self)
+        self.testing = TestingManager(self)
         
         # Policy parameters
         self.mask_mandate = False
-        self.social_distancing = True
+        self.social_distancing = False
         self.num_vaccinated = 0
+        self.test_frequency = 20
         
         # Time parameters
         self.steps_per_day = 24
@@ -71,7 +74,9 @@ class factory_model(Model):
             action_cost = self.grid_manager.apply_action(action)
         else:
             action_cost = 0
-            
+        
+        self.testing.process_testing()
+
         self.quarantine.process_quarantine()
         
         if self.current_step_in_day == self.next_shift_change:

@@ -35,9 +35,8 @@ class worker_agent(Agent):
         self.confined_to_2x2 = True
         self.confined_steps = 0
 
-
     def get_valid_positions(self):
-        """Get all valid positions on the grid within the agent's 2x2 section"""
+        """Get all valid positions on the grid within the agent's section"""
         x_start, x_end = self.get_section_bounds()
         
         if self.base_position is None:
@@ -45,15 +44,22 @@ class worker_agent(Agent):
             
         if self.confined_to_2x2:
             x, y = self.base_position
-            valid_positions = [
+            potential_positions = [
                 (x+dx, y+dy) for dx in range(0, 2) for dy in range(0, 2)
                 if (x_start <= x+dx < x_end and
                     0 <= y+dy < self.model.grid.height)
             ]
-            return valid_positions
+        else:
+            potential_positions = [(x, y) for x in range(x_start, x_end, 2) 
+                                for y in range(self.model.grid.height) if y % 2 == 0]
         
-        return [(x, y) for x in range(x_start, x_end, 2) 
-                for y in range(self.model.grid.height) if y % 2 == 0]
+        valid_positions = []
+        for pos in potential_positions:
+            cell_contents = self.model.grid.get_cell_list_contents([pos])
+            if not cell_contents or (len(cell_contents) == 1 and cell_contents[0] == self):
+                valid_positions.append(pos)
+        
+        return valid_positions
     
     def update_base_position(self):
         """Update the base position after n steps."""
@@ -82,11 +88,8 @@ class worker_agent(Agent):
             return
 
         if self.model.social_distancing:
-            x_start, x_end = self.get_section_bounds()
             valid_positions = []
-            
             check_positions = self.get_valid_positions()
-            
             MINIMUM_DISTANCE = 1
             
             for pos in check_positions:
@@ -127,12 +130,10 @@ class worker_agent(Agent):
                         best_positions.append(pos)
                 
                 valid_positions = best_positions
-
-            if valid_positions:
-                new_position = random.choice(valid_positions)
-                self.model.grid.move_agent(self, new_position)
         else:
             valid_positions = self.get_valid_positions()
+        
+        if valid_positions:
             new_position = random.choice(valid_positions)
             self.model.grid.move_agent(self, new_position)
 

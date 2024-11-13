@@ -2,7 +2,7 @@ class QuarantineManager:
     def __init__(self, model):
         self.model = model
         self.quarantine_zone = []
-        self.quarantine_threshold = 20
+        self.quarantine_threshold = 1000
         
     def process_quarantine(self):
         for agent in self.model.schedule.agents:
