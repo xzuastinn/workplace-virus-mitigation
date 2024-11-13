@@ -24,7 +24,7 @@ class factory_model(Model):
         
         # Policy parameters
         self.mask_mandate = False
-        self.social_distancing = True
+        self.social_distancing = False
         self.num_vaccinated = 0
         
         # Time parameters

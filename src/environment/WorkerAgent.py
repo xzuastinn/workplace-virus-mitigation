@@ -71,9 +71,74 @@ class worker_agent(Agent):
             self.confined_to_3x3 = False
             self.confined_steps = 0
 
-        valid_positions = self.get_valid_positions()
-        new_position = random.choice(valid_positions)
-        self.model.grid.move_agent(self, new_position)
+        if self.model.social_distancing:
+            x_start, x_end = self.get_section_bounds()
+            valid_positions = []
+            
+            if not self.confined_to_3x3:
+                check_positions = [(x, y) for x in range(x_start, x_end) 
+                                for y in range(self.model.grid.height)]
+            else:
+                x, y = self.base_position
+                check_positions = [(x+dx, y+dy) for dx in range(-1, 2) 
+                                for dy in range(-1, 2)]
+            
+            MINIMUM_DISTANCE = 1
+            
+            for pos in check_positions:
+                if not (0 <= pos[0] < self.model.grid.width and 
+                    0 <= pos[1] < self.model.grid.height):
+                    continue
+                    
+                is_valid = True
+                for neighbor_pos in self.model.grid.iter_neighborhood(
+                    pos, moore=True, radius=MINIMUM_DISTANCE
+                ):
+                    if (0 <= neighbor_pos[0] < self.model.grid.width and 
+                        0 <= neighbor_pos[1] < self.model.grid.height):
+                        cell_contents = self.model.grid.get_cell_list_contents([neighbor_pos])
+                        if any(isinstance(a, type(self)) for a in cell_contents):
+                            is_valid = False
+                            break
+                
+                if is_valid:
+                    valid_positions.append(pos)
+            
+            if not valid_positions:
+                min_neighbors = float('inf')
+                best_positions = []
+                
+                for pos in check_positions:
+                    if not (0 <= pos[0] < self.model.grid.width and 
+                        0 <= pos[1] < self.model.grid.height):
+                        continue
+                        
+                    neighbor_count = sum(
+                        1 for neighbor_pos in self.model.grid.iter_neighborhood(
+                            pos, moore=True, radius=MINIMUM_DISTANCE
+                        )
+                        if (0 <= neighbor_pos[0] < self.model.grid.width and 
+                            0 <= neighbor_pos[1] < self.model.grid.height and
+                            any(isinstance(a, type(self)) 
+                                for a in self.model.grid.get_cell_list_contents([neighbor_pos]))
+                        )
+                    )
+                    
+                    if neighbor_count < min_neighbors:
+                        min_neighbors = neighbor_count
+                        best_positions = [pos]
+                    elif neighbor_count == min_neighbors:
+                        best_positions.append(pos)
+                
+                valid_positions = best_positions
+
+            if valid_positions:
+                new_position = random.choice(valid_positions)
+                self.model.grid.move_agent(self, new_position)
+        else:
+            valid_positions = self.get_valid_positions()
+            new_position = random.choice(valid_positions)
+            self.model.grid.move_agent(self, new_position)
 
         if self.confined_to_3x3:
             self.confined_steps += 1
@@ -84,16 +149,15 @@ class worker_agent(Agent):
                 self.base_position = (new_x, new_y)
                 self.confined_to_3x3 = True
                 self.confined_steps = 0
-        else:
-            self.update_base_position()
+
 
     def get_infection_probability(self, distance, had_covid):
         """Calculate infection probability based on distance and immunity status."""
         base_probabilities = {
-            0: 0.2,  # Same cell
-            1: 0.1,  # Adjacent cells
-            2: 0.05,  # Two cells away
-            3: 0.01   # Three cells away
+            0: 0.4,  # Same cell
+            1: 0.2,  # Adjacent cells
+            2: 0.1,  # Two cells away
+            3: 0.05   # Three cells away
         }
         
         base_prob = base_probabilities.get(distance, 0)
@@ -107,15 +171,18 @@ class worker_agent(Agent):
             base_prob *= 0.8  # Social distancing reduces transmission by 20%
             
         return base_prob
+    
     def update_infection(self):
         if self.health_status == "infected":
             self.infection_time += 1
             self.had_covid = True
             if self.infection_time > 40:
                 self.health_status = "recovered"
-                if self.infection_time > 100: # reinfections
-                    self.health_status = "healthy"
-                    self.infection_time = 0
+        elif self.health_status == "recovered":
+            self.infection_time += 1
+            if self.infection_time > 100:
+                self.health_status = "healthy"
+                self.infection_time = 0
 
     def update_production(self):
         """Update agent's current production based on various factors."""
