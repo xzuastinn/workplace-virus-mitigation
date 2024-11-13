@@ -36,13 +36,19 @@ class worker_agent(Agent):
     def get_valid_positions(self):
         """Get all valid positions on the grid within the agent's section"""
         x_start, x_end = self.get_section_bounds()
-        valid_positions = [(x, y) for x in range(x_start, x_end) for y in range(self.model.grid.height)]
-
-        if self.confined_to_3x3:
+        
+        if self.confined_to_3x3 and self.base_position is not None:
             x, y = self.base_position
-            valid_positions = [(x+dx, y+dy) for dx in range(-1, 2) for dy in range(-1, 2)]
-
-        return valid_positions
+            valid_positions = [
+                (x+dx, y+dy) for dx in range(-1, 2) for dy in range(-1, 2)
+                if (0 <= x+dx < self.model.grid.width and 
+                    0 <= y+dy < self.model.grid.height and
+                    x_start <= x+dx < x_end)
+            ]
+            return valid_positions
+        
+        return [(x, y) for x in range(x_start, x_end) 
+                for y in range(self.model.grid.height)]
 
     def update_base_position(self):
         """Update the base position after n steps."""
@@ -68,28 +74,17 @@ class worker_agent(Agent):
 
         if self.steps_since_base_change > self.model.get_steps_per_shift():
             self.update_base_position()
-            self.confined_to_3x3 = False
-            self.confined_steps = 0
+            return
 
         if self.model.social_distancing:
             x_start, x_end = self.get_section_bounds()
             valid_positions = []
             
-            if not self.confined_to_3x3:
-                check_positions = [(x, y) for x in range(x_start, x_end) 
-                                for y in range(self.model.grid.height)]
-            else:
-                x, y = self.base_position
-                check_positions = [(x+dx, y+dy) for dx in range(-1, 2) 
-                                for dy in range(-1, 2)]
+            check_positions = self.get_valid_positions()
             
             MINIMUM_DISTANCE = 1
             
             for pos in check_positions:
-                if not (0 <= pos[0] < self.model.grid.width and 
-                    0 <= pos[1] < self.model.grid.height):
-                    continue
-                    
                 is_valid = True
                 for neighbor_pos in self.model.grid.iter_neighborhood(
                     pos, moore=True, radius=MINIMUM_DISTANCE
@@ -109,10 +104,6 @@ class worker_agent(Agent):
                 best_positions = []
                 
                 for pos in check_positions:
-                    if not (0 <= pos[0] < self.model.grid.width and 
-                        0 <= pos[1] < self.model.grid.height):
-                        continue
-                        
                     neighbor_count = sum(
                         1 for neighbor_pos in self.model.grid.iter_neighborhood(
                             pos, moore=True, radius=MINIMUM_DISTANCE
@@ -140,23 +131,13 @@ class worker_agent(Agent):
             new_position = random.choice(valid_positions)
             self.model.grid.move_agent(self, new_position)
 
-        if self.confined_to_3x3:
-            self.confined_steps += 1
-            if self.confined_steps > self.model.get_steps_per_shift():
-                x_start, x_end = self.get_section_bounds()
-                new_x = random.randrange(x_start, x_end)
-                new_y = random.randrange(self.model.grid.height)
-                self.base_position = (new_x, new_y)
-                self.confined_to_3x3 = True
-                self.confined_steps = 0
-
 
     def get_infection_probability(self, distance, had_covid):
         """Calculate infection probability based on distance and immunity status."""
         base_probabilities = {
             0: 0.4,  # Same cell
-            1: 0.2,  # Adjacent cells
-            2: 0.1,  # Two cells away
+            1: 0.12,  # Adjacent cells
+            2: 0.08,  # Two cells away
             3: 0.05   # Three cells away
         }
         
