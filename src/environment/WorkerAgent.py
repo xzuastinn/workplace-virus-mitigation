@@ -5,19 +5,20 @@ class worker_agent(Agent):
     """A worker agent with a health status and assigned section."""
     def __init__(self, unique_id, model, section):
         super().__init__(unique_id, model)
+        self.unique_id = unique_id
+        self.model = model
         self.section = section
         self.health_status = "healthy"
         self.infection_time = 0
+        self.recovery_time = 0
         self.had_covid = False
-        self.base_position = None
-        self.steps_since_base_change = 0
-        self.mask = False
-        self.social_distance = 0 
         self.is_quarantined = False
         self.base_production = random.uniform(0.9, 1.1)
         self.current_production = self.base_production
         self.confined_to_3x3 = False
         self.confined_steps = 0
+        self.base_position = None
+        self.steps_since_base_change = 0
 
     def get_section_bounds(self):
         """Get the boundaries of the agent's assigned section"""
