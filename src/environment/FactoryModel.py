@@ -55,14 +55,14 @@ class factory_model(Model):
 
     def initialize_datacollector(self):
         self.datacollector = DataCollector({
-            "Healthy": lambda m: self.stats.count_health_status("healthy"),
-            "Infected": lambda m: self.stats.count_health_status("infected"),
-            "Recovered": lambda m: self.stats.count_health_status("recovered"),
-            "Productivity": lambda m: self.stats.calculate_productivity(),
-            "Quarantined": lambda m: len(self.quarantine.quarantine_zone),
-            "Total Reward": lambda m: self.stats.current_reward,
-            "Daily Infections": lambda m: self.stats.daily_infections
+            "Healthy": lambda m: m.stats.count_health_status("healthy"),
+            "Infected": lambda m: m.stats.count_health_status("infected"),
+            "Recovered": lambda m: m.stats.count_health_status("recovered"),
+            "Productivity": lambda m: m.stats.calculate_productivity(),
+            "Quarantined": lambda m: len(m.quarantine.quarantine_zone),
+            "Daily Infections": lambda m: m.stats.daily_infections
         })
+
 
     def step(self, action=None):
         self.current_step_in_day = self.schedule.steps % self.steps_per_day
@@ -76,7 +76,7 @@ class factory_model(Model):
         
         if self.current_step_in_day == self.next_shift_change:
             self.grid_manager.process_shift_change()
-            
+
         pre_step_infected = self.stats.count_health_status("infected")
         self._process_agent_steps()
         post_step_infected = self.stats.count_health_status("infected")
@@ -107,12 +107,9 @@ class factory_model(Model):
         return self.grid_manager.splitting_level
     
     def _get_step_results(self, new_infections, action_cost, total_infected):
-        reward = self.stats.calculate_reward(new_infections) - action_cost
-        self.stats.update_reward(reward)
         
         return (
             self.stats.get_state(),
-            reward,
             self.stats.is_done(),
             {
                 'day': self.stats.current_day,

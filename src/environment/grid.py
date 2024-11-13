@@ -65,7 +65,6 @@ class GridManager:
 
         active_agents = [agent for agent in self.model.schedule.agents if not agent.is_quarantined]
 
-        # Create a list of all occupied positions
         occupied_positions = [agent.pos for agent in active_agents]
 
         for agent in active_agents:
@@ -74,7 +73,6 @@ class GridManager:
             new_y = self.model.random.randrange(self.model.grid.height)
             new_pos = (new_x, new_y)
 
-            # Check if the new position is at least 1 block away from any other agent
             if all(self.get_manhattan_distance(new_pos, pos) > 1 for pos in occupied_positions):
                 if new_pos != agent.pos:
                     self.model.grid.move_agent(agent, new_pos)
@@ -82,7 +80,6 @@ class GridManager:
                     agent.steps_since_base_change = 0
                     occupied_positions.append(new_pos)
             else:
-                # If the agent can't be placed, remove it from the model
                 self.model.grid.remove_agent(agent)
                 self.model.schedule.remove(agent)
 
@@ -115,7 +112,6 @@ class GridManager:
     def redistribute_agents(self):
         for agent in self.model.schedule.agents:
             if agent.pos is not None:
-                # Update agent's section when redistributing
                 agent.section = self.get_section_for_agent(agent.unique_id)
                 new_pos = self.get_valid_position(agent)
                 self.model.grid.move_agent(agent, new_pos)
