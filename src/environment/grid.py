@@ -8,6 +8,7 @@ class GridManager:
         self.splitting_costs = {0: 0.0, 1: 0.1, 2: 0.2, 3: 0.3}
         self.section_boundaries = []
         self.update_section_boundaries()
+        self.section_infection_levels = [0] * (2 ** self.splitting_level if self.splitting_level > 0 else 1)
         
     def update_section_boundaries(self):
         self.section_boundaries = []
@@ -115,3 +116,13 @@ class GridManager:
                 agent.section = self.get_section_for_agent(agent.unique_id)
                 new_pos = self.get_valid_position(agent)
                 self.model.grid.move_agent(agent, new_pos)
+    
+    def update_infection_level(self, section_index, infected_count):
+        self.section_infection_levels[section_index] += infected_count
+        
+    def get_infection_probability(self, section_index):
+        base_probability = 0.1
+        return base_probability * self.section_infection_levels[section_index]
+        
+    def clean_section(self, section_index):
+        self.section_infection_levels[section_index] = 0

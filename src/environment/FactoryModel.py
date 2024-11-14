@@ -75,7 +75,7 @@ class factory_model(Model):
         else:
             action_cost = 0
         
-        self.testing.process_testing()
+        #self.testing.process_testing()
 
         self.quarantine.process_quarantine()
         

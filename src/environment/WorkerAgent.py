@@ -148,7 +148,8 @@ class worker_agent(Agent):
         }
         
         base_prob = base_probabilities.get(distance, 0)
-        
+        section_index = self.model.grid_manager.get_section_index(self.pos[0])
+        section_prob = self.model.grid_manager.get_infection_probability(section_index)
         if had_covid:
             base_prob *= 0.5
             
@@ -157,7 +158,7 @@ class worker_agent(Agent):
         if self.model.social_distancing:
             base_prob *= 0.8  # Social distancing reduces transmission by 20%
             
-        return base_prob
+        return base_prob * section_prob
     
     def update_infection(self):
         if self.health_status == "infected":
@@ -204,7 +205,8 @@ class worker_agent(Agent):
         if self.health_status == "infected":
             x, y = self.pos
             x_start, x_end = self.get_section_bounds()
-            
+            section_index = self.model.grid_manager.get_section_index(self.pos[0])
+            self.model.grid_manager.update_infection_level(section_index, 1 if self.health_status == "infected" else 0)
             for dx in range(-3, 4):
                 for dy in range(-3, 4):
                     target_pos = (x + dx, y + dy)
