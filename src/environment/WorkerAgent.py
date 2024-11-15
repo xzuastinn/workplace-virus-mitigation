@@ -149,6 +149,11 @@ class worker_agent(Agent):
         
         base_prob = base_probabilities.get(distance, 0)
         section_index = self.model.grid_manager.get_section_index(self.pos[0])
+
+        target_section_index = self.model.grid_manager.get_section_index(self.pos[0])
+        if section_index != target_section_index:
+            base_prob *= 0.15
+
         section_prob = self.model.grid_manager.get_infection_probability(section_index)
         if had_covid:
             base_prob *= 0.5
@@ -204,16 +209,15 @@ class worker_agent(Agent):
         """Spread infection based on proximity with radius-based probability."""
         if self.health_status == "infected":
             x, y = self.pos
-            x_start, x_end = self.get_section_bounds()
             section_index = self.model.grid_manager.get_section_index(self.pos[0])
             self.model.grid_manager.update_infection_level(section_index, 1 if self.health_status == "infected" else 0)
+            
             for dx in range(-3, 4):
                 for dy in range(-3, 4):
                     target_pos = (x + dx, y + dy)
                     
                     if (0 <= target_pos[0] < self.model.grid.width and 
-                        0 <= target_pos[1] < self.model.grid.height and
-                        x_start <= target_pos[0] < x_end):
+                        0 <= target_pos[1] < self.model.grid.height):
                         
                         distance = self.get_manhattan_distance(self.pos, target_pos)
                         
@@ -224,6 +228,7 @@ class worker_agent(Agent):
                                 if (isinstance(agent, worker_agent) and 
                                     agent.health_status == "healthy"):
                                     
+                                    target_section = self.model.grid_manager.get_section_index(target_pos[0])
                                     infection_prob = self.get_infection_probability(
                                         distance, 
                                         agent.had_covid
@@ -232,6 +237,7 @@ class worker_agent(Agent):
                                     if random.random() < infection_prob:
                                         agent.health_status = "infected"
                                         agent.had_covid = True
+                                        self.model.grid_manager.update_infection_level(target_section, 1)
 
     def step(self):
         """Define agent's behavior per step."""

@@ -44,7 +44,7 @@ server = ModularServer(
     factory_model,
     [grid, chart, prod_chart, daily_infections_chart],
     "Factory Infection Model",
-    {"width": GRID_WIDTH, "height": GRID_HEIGHT, "N": 40, "visualization": True}
+    {"width": GRID_WIDTH, "height": GRID_HEIGHT, "N": 60, "visualization": True}
 )
 
 server.port = 8511
