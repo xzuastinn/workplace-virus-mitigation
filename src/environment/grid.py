@@ -7,6 +7,18 @@ class GridManager:
         self.splitting_level = 1 # 0 full grid, 1 half, 2 quarter, 3 eights
         self.splitting_costs = {0: 0.0, 1: 0.1, 2: 0.2, 3: 0.3}
         self.section_boundaries = []
+        self.cleaning_schedule = {
+            'light': {'frequency': 8, 'infection_reduction': 0.2, 'duration': 1},
+            'medium': {'frequency': 16, 'infection_reduction': 0.5, 'duration': 2},
+            'heavy': {'frequency': 24, 'infection_reduction': 0.8, 'duration': 3}
+        }
+        self.current_cleaning = 'light'
+        self.cleaning_steps_remaining = 0
+        self.next_cleaning_steps = {
+            'light': 8,
+            'medium': 16,
+            'heavy': 24
+        }
         self.update_section_boundaries()
         self.section_infection_levels = [0] * (2 ** self.splitting_level if self.splitting_level > 0 else 1)
         
@@ -145,9 +157,39 @@ class GridManager:
         
     def get_infection_probability(self, section_index):
         base_probability = 0.1
-        return base_probability * self.section_infection_levels[section_index]
+        balancer = 0.5
+        return base_probability * (self.section_infection_levels[section_index] ** balancer)
         
-    def clean_section(self, section_index):
-        num_sections = len(self.section_infection_levels)
-        if 0 <= section_index < num_sections:
-            self.section_infection_levels[section_index] = 0
+    def process_cleaning(self):
+        """Process cleaning activities and their effects"""
+        if self.cleaning_steps_remaining > 0:
+            self.apply_cleaning_effects()
+            self.cleaning_steps_remaining -= 1
+            if self.cleaning_steps_remaining == 0:
+                self.current_cleaning = None
+        else:
+            for cleaning_type, next_step in self.next_cleaning_steps.items():
+                if self.model.current_step_in_day == next_step:
+                    self.start_cleaning(cleaning_type)
+                    break
+
+    def start_cleaning(self, cleaning_type):
+        """Start a new cleaning cycle"""
+        self.current_cleaning = cleaning_type
+        self.cleaning_steps_remaining = self.cleaning_schedule[cleaning_type]['duration']
+        
+        self.next_cleaning_steps[cleaning_type] = (
+            (self.model.current_step_in_day + self.cleaning_schedule[cleaning_type]['frequency']) 
+            % self.model.steps_per_day
+        )
+        
+        self.apply_cleaning_effects()
+
+    def apply_cleaning_effects(self):
+        """Apply the effects of current cleaning"""
+        if self.current_cleaning:
+            reduction = self.cleaning_schedule[self.current_cleaning]['infection_reduction']
+            for i in range(len(self.section_infection_levels)):
+                self.section_infection_levels[i] *= (1 - reduction)
+
+    

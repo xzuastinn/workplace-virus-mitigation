@@ -234,7 +234,9 @@ class worker_agent(Agent):
 
         if self.is_quarantined:
             production = 0
-
+            
+        if self.model.grid_manager.current_cleaning:
+            production *= 0.5
         self.current_production = production
 
     def get_manhattan_distance(self, pos1, pos2):

@@ -29,7 +29,9 @@ class factory_model(Model):
         self.social_distancing = False
         self.num_vaccinated = 0
         self.test_frequency = 20
-        
+        self.testing_start_step = 1
+        self.next_test_step = self.testing_start_step 
+
         # Time parameters
         self.steps_per_day = 24
         self.shifts_per_day = 3
@@ -68,6 +70,12 @@ class factory_model(Model):
             "Daily Infections": lambda m: m.stats.daily_infections
         })
 
+    def should_run_testing(self):
+        current_step = self.schedule.steps
+        if current_step >= self.next_test_step:
+            self.next_test_step = current_step + self.test_frequency
+            return True
+        return False
 
     def step(self, action=None):
         self.current_step_in_day = self.schedule.steps % self.steps_per_day
@@ -77,7 +85,11 @@ class factory_model(Model):
         else:
             action_cost = 0
         
-        #self.testing.process_testing()
+        self.grid_manager.process_cleaning()
+
+        if self.should_run_testing():
+            print(f"Running factory tests at step {self.schedule.steps}")  # Debug print
+            self.testing.process_testing()
 
         self.quarantine.process_quarantine()
         
