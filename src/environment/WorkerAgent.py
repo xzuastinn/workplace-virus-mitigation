@@ -22,11 +22,17 @@ class worker_agent(Agent):
 
     def get_section_bounds(self):
         """Get the boundaries of the agent's assigned section"""
-        section_num = int(self.section.split('_')[1])
+        if hasattr(self, 'last_section'):
+            section_num = self.last_section
+        else:
+            section_num = int(self.section.split('_')[1])
+            self.last_section = section_num
+            
         num_sections = 2 ** self.model.splitting_level if self.model.splitting_level > 0 else 1
-        section_width = self.model.grid.width // num_sections
+        section_width = max(1, self.model.grid.width // num_sections)
         x_start = section_num * section_width
-        x_end = (section_num + 1) * section_width
+        x_end = min((section_num + 1) * section_width, self.model.grid.width)
+        
         return x_start, x_end
 
     def set_base_position(self, pos):
@@ -39,39 +45,70 @@ class worker_agent(Agent):
         """Get all valid positions on the grid within the agent's section"""
         x_start, x_end = self.get_section_bounds()
         
+        x_start = max(0, min(x_start, self.model.grid.width - 1))
+        x_end = max(0, min(x_end, self.model.grid.width))
+        
         if self.base_position is None:
             self.set_base_position((x_start, 0))
             
         if self.confined_to_2x2:
             x, y = self.base_position
             potential_positions = [
-                (x+dx, y+dy) for dx in range(0, 2) for dy in range(0, 2)
+                (x+dx, y+dy) 
+                for dx in range(0, 2) 
+                for dy in range(0, 2)
                 if (x_start <= x+dx < x_end and
-                    0 <= y+dy < self.model.grid.height)
+                    0 <= y+dy < self.model.grid.height and
+                    0 <= x+dx < self.model.grid.width)
             ]
         else:
-            potential_positions = [(x, y) for x in range(x_start, x_end, 2) 
-                                for y in range(self.model.grid.height) if y % 2 == 0]
+            potential_positions = [
+                (x, y) 
+                for x in range(x_start, x_end, 2)
+                for y in range(0, self.model.grid.height, 2)
+                if (0 <= x < self.model.grid.width and
+                    0 <= y < self.model.grid.height)
+            ]
         
         valid_positions = []
         for pos in potential_positions:
-            cell_contents = self.model.grid.get_cell_list_contents([pos])
-            if not cell_contents or (len(cell_contents) == 1 and cell_contents[0] == self):
-                valid_positions.append(pos)
+            if (0 <= pos[0] < self.model.grid.width and 
+                0 <= pos[1] < self.model.grid.height):
+                cell_contents = self.model.grid.get_cell_list_contents([pos])
+                if not cell_contents or (len(cell_contents) == 1 and cell_contents[0] == self):
+                    valid_positions.append(pos)
         
-        return valid_positions
+        return valid_positions if valid_positions else [(x_start, 0)] 
     
+
     def update_base_position(self):
         """Update the base position after n steps."""
         x_start, x_end = self.get_section_bounds()
-        new_x = self.random.randrange(x_start, x_end, 2)
-        new_y = self.random.randrange(0, self.model.grid.height, 2)
+        
+        x_start = max(0, min(x_start, self.model.grid.width - 1))
+        x_end = max(0, min(x_end, self.model.grid.width))
+        
+        if x_end <= x_start:
+            x_end = x_start + 1
+            
+        try:
+            new_x = self.random.randrange(x_start, x_end, 2)
+        except ValueError:
+            new_x = x_start
+            
+        try:
+            new_y = self.random.randrange(0, self.model.grid.height, 2)
+        except ValueError:
+            new_y = 0
+            
         self.base_position = (new_x, new_y)
         self.steps_since_base_change = 0
         self.confined_to_2x2 = True
         self.confined_steps = 0
 
-        self.model.grid.move_agent(self, self.base_position)
+        if (0 <= new_x < self.model.grid.width and 
+            0 <= new_y < self.model.grid.height):
+            self.model.grid.move_agent(self, self.base_position)
 
     def move(self):
         """Move the agent to a random valid position on the grid."""
@@ -149,7 +186,6 @@ class worker_agent(Agent):
         
         base_prob = base_probabilities.get(distance, 0)
         section_index = self.model.grid_manager.get_section_index(self.pos[0])
-
         target_section_index = self.model.grid_manager.get_section_index(self.pos[0])
         if section_index != target_section_index:
             base_prob *= 0.15

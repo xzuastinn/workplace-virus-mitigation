@@ -45,7 +45,8 @@ class factory_model(Model):
         num_sections = 2 ** self.grid_manager.splitting_level if self.grid_manager.splitting_level > 0 else 1
 
         for i in range(self.num_agents):
-            section = f'section_{i // (self.num_agents // num_sections)}'
+            section_index = positions[i][0] // (self.grid.width // num_sections)
+            section = f'section_{section_index}'
             worker = worker_agent(i, self, section)
 
             if i == first_infection:
@@ -55,6 +56,7 @@ class factory_model(Model):
             pos = positions[i]
             self.grid.place_agent(worker, pos)
             worker.set_base_position(pos)
+            worker.last_section = section_index
 
     def initialize_datacollector(self):
         self.datacollector = DataCollector({

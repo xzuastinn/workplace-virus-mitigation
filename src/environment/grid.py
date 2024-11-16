@@ -65,22 +65,37 @@ class GridManager:
         self.model.current_shift = (self.model.current_shift + 1) % self.model.shifts_per_day
 
         active_agents = [agent for agent in self.model.schedule.agents if not agent.is_quarantined]
-
-        occupied_positions = [agent.pos for agent in active_agents]
+        occupied_positions = []
 
         for agent in active_agents:
-            section_start, section_end = agent.get_section_bounds()
-            new_x = self.model.random.randrange(section_start, section_end)
-            new_y = self.model.random.randrange(self.model.grid.height)
-            new_pos = (new_x, new_y)
+            current_section_index = self.get_section_index(agent.pos[0])
+            
+            section_width = self.model.grid.width // (2 ** self.splitting_level if self.splitting_level > 0 else 1)
+            section_start = current_section_index * section_width
+            section_end = section_start + section_width
 
-            if all(self.get_manhattan_distance(new_pos, pos) > 1 for pos in occupied_positions):
-                if new_pos != agent.pos:
-                    self.model.grid.move_agent(agent, new_pos)
-                    agent.set_base_position(new_pos)
-                    agent.steps_since_base_change = 0
-                    occupied_positions.append(new_pos)
-            else:
+            attempts = 0
+            max_attempts = 10
+            placed = False
+
+            while attempts < max_attempts and not placed:
+                new_x = self.model.random.randrange(section_start, section_end)
+                new_y = self.model.random.randrange(self.model.grid.height)
+                new_pos = (new_x, new_y)
+
+                if new_pos not in occupied_positions:
+                    if new_pos != agent.pos:
+                        self.model.grid.move_agent(agent, new_pos)
+                        agent.set_base_position(new_pos)
+                        agent.steps_since_base_change = 0
+                        occupied_positions.append(new_pos)
+                        agent.section = f'section_{current_section_index}'
+                        agent.last_section = current_section_index
+                        placed = True
+                    break
+                attempts += 1
+
+            if not placed:
                 self.model.grid.remove_agent(agent)
                 self.model.schedule.remove(agent)
 
