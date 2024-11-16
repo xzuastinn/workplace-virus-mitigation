@@ -24,6 +24,9 @@ class GridManager:
                 7 * self.model.grid.width // 8
             ])
         self.section_boundaries = sorted(list(set(self.section_boundaries)))
+        
+        num_sections = 2 ** self.splitting_level if self.splitting_level > 0 else 1
+        self.section_infection_levels = [0] * num_sections
     
     def get_section_for_agent(self, agent_id):
         num_sections = 2 ** self.splitting_level if self.splitting_level > 0 else 1
@@ -38,8 +41,11 @@ class GridManager:
     def get_section_index(self, x_coord):
         if self.splitting_level == 0:
             return 0
-        section_width = self.model.grid.width // (2 ** self.splitting_level)
-        return x_coord // section_width
+            
+        num_sections = 2 ** self.splitting_level
+        section_width = max(1, self.model.grid.width // num_sections)
+        section_index = min(x_coord // section_width, num_sections - 1)
+        return section_index
         
     def get_valid_position(self, agent):
         section = (getattr(agent, 'last_section', None) or 
@@ -133,11 +139,15 @@ class GridManager:
                 self.model.grid.move_agent(agent, new_pos)
     
     def update_infection_level(self, section_index, infected_count):
-        self.section_infection_levels[section_index] += infected_count
+        num_sections = len(self.section_infection_levels)
+        if 0 <= section_index < num_sections:
+            self.section_infection_levels[section_index] += infected_count
         
     def get_infection_probability(self, section_index):
         base_probability = 0.1
         return base_probability * self.section_infection_levels[section_index]
         
     def clean_section(self, section_index):
-        self.section_infection_levels[section_index] = 0
+        num_sections = len(self.section_infection_levels)
+        if 0 <= section_index < num_sections:
+            self.section_infection_levels[section_index] = 0
