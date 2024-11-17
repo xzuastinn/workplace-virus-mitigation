@@ -41,9 +41,6 @@ class factory_model(Model):
         self.current_shift = 0 
 
         # Testing schedule
-        self.test_frequency = 20
-        self.last_test_step = 0
-        self.next_test_step = self.test_frequency
         self.testing.set_testing_level('medium')
         
     
@@ -78,6 +75,8 @@ class factory_model(Model):
             'medium': {'next_step': 16, 'frequency': 16},
             'heavy': {'next_step': 24, 'frequency': 24}
         }
+        self.active_cleaning = None
+        self.cleaning_steps_remaining = 0
 
     def initialize_datacollector(self):
         self.datacollector = DataCollector({
@@ -87,14 +86,6 @@ class factory_model(Model):
             "Productivity": lambda m: m.stats.calculate_productivity() * m.testing.get_productivity_modifier(),            "Quarantined": lambda m: len(m.quarantine.quarantine_zone),
             "Daily Infections": lambda m: m.stats.daily_infections
         })
-
-    def should_run_testing(self):
-        """Improved testing schedule check"""
-        if self.current_step >= self.next_test_step:
-            self.last_test_step = self.current_step
-            self.next_test_step = self.current_step + self.test_frequency
-            return True
-        return False
     
     def update_testing_config(self, config):
         """Update testing configuration with provided settings"""
@@ -114,10 +105,11 @@ class factory_model(Model):
                 }
     def should_run_cleaning(self, cleaning_type):
         """Check if cleaning should be performed"""
-        schedule = self.cleaning_schedules[cleaning_type]
-        if self.current_step_in_day == schedule['next_step']:
-            schedule['next_step'] = (self.current_step_in_day + schedule['frequency']) % self.steps_per_day
-            return True
+        if self.active_cleaning is None:
+            schedule = self.cleaning_schedules[cleaning_type]
+            if self.current_step_in_day == schedule['next_step']:
+                schedule['next_step'] = (self.current_step_in_day + schedule['frequency']) % self.steps_per_day
+                return True
         return False
     
     def should_change_shift(self):
@@ -161,10 +153,11 @@ class factory_model(Model):
     
     def process_scheduled_events(self):
         """Process all scheduled events in the correct order"""
-        for cleaning_type in ['light', 'medium', 'heavy']:
-            if self.should_run_cleaning(cleaning_type):
-                self.grid_manager.start_cleaning(cleaning_type)
-        
+        if self.grid_manager.current_cleaning is None:
+            for cleaning_type in ['heavy', 'medium', 'light']:
+                if self.should_run_cleaning(cleaning_type):
+                    self.grid_manager.start_cleaning(cleaning_type)
+                    break 
         if self.grid_manager.current_cleaning:
             self.grid_manager.process_cleaning()
             

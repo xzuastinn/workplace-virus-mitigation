@@ -154,10 +154,9 @@ class GridManager:
         """Update infection levels for a section"""
         num_sections = len(self.section_infection_levels)
         if 0 <= section_index < num_sections:
-            # Cap the infection level to prevent extreme values
             self.section_infection_levels[section_index] = min(
                 self.section_infection_levels[section_index] + infected_count,
-                10  # Maximum infection level
+                10
             )
         
     def get_infection_probability(self, section_index):

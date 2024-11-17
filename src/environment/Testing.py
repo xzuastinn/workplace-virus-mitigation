@@ -1,41 +1,35 @@
 import random
 class TestingManager:
     def __init__(self, model):
-        """
-        Initialize the testing manager with fixed testing intensities
-        """
         self.model = model
-        self.false_positive_rate = 0.02  # 2% chance of false positive
-        self.false_negative_rate = 0.15  # 15% chance of false negative
+        self.false_positive_rate = 0.02
+        self.false_negative_rate = 0.15
         self.tests_performed = 0
         self.last_test_step = -1
         
         self.testing_levels = {
             'light': {
                 'enabled': False,
-                'proportion': 0.2,  # Test 20% of workforce
+                'proportion': 0.2,
                 'productivity_impact': 0.15,
-                'frequency': 8  # Every 8 steps
+                'frequency': 8
             },
             'medium': {
                 'enabled': False,
-                'proportion': 0.5,  # Test 50% of workforce
+                'proportion': 0.5,
                 'productivity_impact': 0.25,
-                'frequency': 16  # Every 16 steps
+                'frequency': 16
             },
             'heavy': {
                 'enabled': False,
-                'proportion': 0.8,  # Test 80% of workforce
+                'proportion': 0.8,
                 'productivity_impact': 0.40,
-                'frequency': 24  # Every 24 steps (once per day)
+                'frequency': 24
             }
         }
         
-        self.testing_schedules = {
-            level: {
-                'next_step': config['frequency'],
-                'frequency': config['frequency']
-            }
+        self.next_test_steps = {
+            level: config['frequency'] 
             for level, config in self.testing_levels.items()
         }
         
@@ -88,17 +82,16 @@ class TestingManager:
         """
         return 1 - self.current_productivity_impact
         
+
     def should_run_testing(self, testing_type):
-        """
-        Check if testing should be performed for a given intensity
-        """
         if not self.testing_levels[testing_type]['enabled']:
             return False
             
-        schedule = self.testing_schedules[testing_type]
-        if self.model.current_step_in_day == schedule['next_step']:
-            schedule['next_step'] = (self.model.current_step_in_day + 
-                                   schedule['frequency']) % self.model.steps_per_day
+        if self.model.current_step_in_day == self.next_test_steps[testing_type]:
+            self.next_test_steps[testing_type] = (
+                self.model.current_step_in_day + 
+                self.testing_levels[testing_type]['frequency']
+            ) % self.model.steps_per_day
             return True
         return False
         
