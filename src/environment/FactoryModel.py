@@ -21,10 +21,10 @@ class factory_model(Model):
         
         # Policy parameters
         self.mask_mandate = False
-        self.social_distancing = False
+        self.social_distancing = True
         self.num_vaccinated = 0
         self.initial_cleaning = 'heavy'
-        self.test_lvl = 'none'
+        self.test_lvl = 'light'
 
         # Initialize managers
         self.quarantine = QuarantineManager(self)
@@ -96,7 +96,7 @@ class factory_model(Model):
             action_cost = 0
             
         self.process_scheduled_events()
-        
+
         pre_step_infected = self.stats.count_health_status("infected")
         self._process_agent_steps()
         post_step_infected = self.stats.count_health_status("infected")
@@ -109,6 +109,8 @@ class factory_model(Model):
             
         self.datacollector.collect(self)
         
+        self.testing.current_productivity_impact = 0
+
         if not self.visualization:
             return self._get_step_results(new_infections, action_cost, post_step_infected)
             

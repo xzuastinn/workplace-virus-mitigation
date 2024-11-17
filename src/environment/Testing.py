@@ -102,17 +102,17 @@ class TestingManager:
         """
         if not self.testing_levels[testing_intensity]['enabled']:
             return
-            
+                
         current_step = self.model.current_step
         
         if current_step == self.last_test_step:
             return
-            
+                
         self.last_test_step = current_step
-        
+
         agents_to_test = self.get_agents_to_test(testing_intensity)
         self.apply_productivity_impact(testing_intensity)
-        
+
         for agent in agents_to_test:
             test_positive = self.test_agent(agent)
             if test_positive:
