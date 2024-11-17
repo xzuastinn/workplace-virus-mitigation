@@ -8,11 +8,11 @@ class GridManager:
         self.splitting_costs = {0: 0.0, 1: 0.1, 2: 0.2, 3: 0.3}
         self.section_boundaries = []
         self.cleaning_schedule = {
-            'light': {'frequency': 8, 'infection_reduction': 0.2, 'duration': 1},
-            'medium': {'frequency': 16, 'infection_reduction': 0.5, 'duration': 2},
+            'light': {'frequency': 8, 'infection_reduction': 0.35, 'duration': 1},
+            'medium': {'frequency': 16, 'infection_reduction': 0.65, 'duration': 2},
             'heavy': {'frequency': 24, 'infection_reduction': 0.8, 'duration': 3}
         }
-        self.current_cleaning = 'light'
+        self.current_cleaning = 'heavy'
         self.cleaning_steps_remaining = 0
         self.next_cleaning_steps = {
             'light': 8,
@@ -151,14 +151,23 @@ class GridManager:
                 self.model.grid.move_agent(agent, new_pos)
     
     def update_infection_level(self, section_index, infected_count):
+        """Update infection levels for a section"""
         num_sections = len(self.section_infection_levels)
         if 0 <= section_index < num_sections:
-            self.section_infection_levels[section_index] += infected_count
+            # Cap the infection level to prevent extreme values
+            self.section_infection_levels[section_index] = min(
+                self.section_infection_levels[section_index] + infected_count,
+                10  # Maximum infection level
+            )
         
     def get_infection_probability(self, section_index):
-        base_probability = 0.1
-        balancer = 0.5
-        return base_probability * (self.section_infection_levels[section_index] ** balancer)
+        """Calculate infection probability based on section infection levels"""
+        base_probability = 0.8
+        infection_level = self.section_infection_levels[section_index]
+        
+        multiplier = min(1.0 + (infection_level * 0.1), 2.0) #capped at 2
+        
+        return base_probability * multiplier
         
     def process_cleaning(self):
         """Process cleaning activities and their effects"""

@@ -28,15 +28,13 @@ class factory_model(Model):
         self.mask_mandate = False
         self.social_distancing = False
         self.num_vaccinated = 0
-        self.test_frequency = 20
-        self.testing_start_step = 1
-        self.next_test_step = self.testing_start_step 
 
         # Time parameters
         self.steps_per_day = 24
         self.shifts_per_day = 3
         self.steps_per_shift = self.steps_per_day // self.shifts_per_day
         self.next_shift_change = self.steps_per_shift
+
         self.current_step = 0
         self.current_step_in_day = 0
         self.current_day = 0
@@ -46,11 +44,9 @@ class factory_model(Model):
         self.test_frequency = 20
         self.last_test_step = 0
         self.next_test_step = self.test_frequency
+        self.testing.set_testing_level('medium')
         
-        # Shift change schedule
-        self.next_shift_change = self.steps_per_shift
-        
-        # Cleaning schedule initialization
+    
         self.initialize_cleaning_schedule()
         
         self.initialize_agents()
@@ -88,8 +84,7 @@ class factory_model(Model):
             "Healthy": lambda m: m.stats.count_health_status("healthy"),
             "Infected": lambda m: m.stats.count_health_status("infected"),
             "Recovered": lambda m: m.stats.count_health_status("recovered"),
-            "Productivity": lambda m: m.stats.calculate_productivity(),
-            "Quarantined": lambda m: len(m.quarantine.quarantine_zone),
+            "Productivity": lambda m: m.stats.calculate_productivity() * m.testing.get_productivity_modifier(),            "Quarantined": lambda m: len(m.quarantine.quarantine_zone),
             "Daily Infections": lambda m: m.stats.daily_infections
         })
 
@@ -101,6 +96,22 @@ class factory_model(Model):
             return True
         return False
     
+    def update_testing_config(self, config):
+        """Update testing configuration with provided settings"""
+        for level, settings in config.items():
+            if level in self.testing_config:
+                self.testing_config[level].update(settings)
+
+    def configure_testing_schedules(self):
+        """Configure testing schedules based on current configuration"""
+        testing_schedules = {}
+        for level, settings in self.testing_config.items():
+            if level != 'none' and settings.get('enabled', False):
+                frequency = settings.get('frequency', self.testing.testing_schedules[level]['frequency'])
+                testing_schedules[level] = {
+                    'next_step': frequency,
+                    'frequency': frequency
+                }
     def should_run_cleaning(self, cleaning_type):
         """Check if cleaning should be performed"""
         schedule = self.cleaning_schedules[cleaning_type]
@@ -157,9 +168,9 @@ class factory_model(Model):
         if self.grid_manager.current_cleaning:
             self.grid_manager.process_cleaning()
             
-        if self.should_run_testing():
-            print(f"Running factory tests at step {self.current_step}")
-            self.testing.process_testing()
+        for testing_type in ['light', 'medium', 'heavy']:
+            if self.testing.should_run_testing(testing_type):
+                self.testing.process_testing(testing_type)
             
         self.quarantine.process_quarantine()
         
