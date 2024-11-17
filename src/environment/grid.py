@@ -8,16 +8,31 @@ class GridManager:
         self.splitting_costs = {0: 0.0, 1: 0.1, 2: 0.2, 3: 0.3}
         self.section_boundaries = []
         self.cleaning_schedule = {
-            'light': {'frequency': 8, 'infection_reduction': 0.35, 'duration': 1},
-            'medium': {'frequency': 16, 'infection_reduction': 0.65, 'duration': 2},
-            'heavy': {'frequency': 24, 'infection_reduction': 0.8, 'duration': 3}
+            'light': {
+                'frequency': 8, 
+                'infection_reduction': 0.35, 
+                'duration': 1,
+                'production_reduction': 0.05  # 5% production reduction
+            },
+            'medium': {
+                'frequency': 16, 
+                'infection_reduction': 0.65, 
+                'duration': 2,
+                'production_reduction': 0.15  # 15% production reduction
+            },
+            'heavy': {
+                'frequency': 16, 
+                'infection_reduction': 0.8, 
+                'duration': 2,
+                'production_reduction': 0.25  # 25% production reduction
+            }
         }
-        self.current_cleaning = 'heavy'
+        self.current_cleaning = self.model.initial_cleaning
         self.cleaning_steps_remaining = 0
-        self.next_cleaning_steps = {
+        self.next_cleaning = {
             'light': 8,
             'medium': 16,
-            'heavy': 24
+            'heavy': 16
         }
         self.update_section_boundaries()
         self.section_infection_levels = [0] * (2 ** self.splitting_level if self.splitting_level > 0 else 1)
@@ -58,7 +73,7 @@ class GridManager:
         section_width = max(1, self.model.grid.width // num_sections)
         section_index = min(x_coord // section_width, num_sections - 1)
         return section_index
-        
+    
     def get_valid_position(self, agent):
         section = (getattr(agent, 'last_section', None) or 
                   self.model.random.randrange(2 ** self.splitting_level) if self.splitting_level > 0 else 0)
@@ -167,37 +182,48 @@ class GridManager:
         multiplier = min(1.0 + (infection_level * 0.1), 2.0) #capped at 2
         
         return base_probability * multiplier
-        
-    def process_cleaning(self):
-        """Process cleaning activities and their effects"""
+            
+    def process_cleaning(self, current_step_in_day):
+        """Main cleaning logic processing method"""
         if self.cleaning_steps_remaining > 0:
             self.apply_cleaning_effects()
             self.cleaning_steps_remaining -= 1
-            if self.cleaning_steps_remaining == 0:
-                self.current_cleaning = None
-        else:
-            for cleaning_type, next_step in self.next_cleaning_steps.items():
-                if self.model.current_step_in_day == next_step:
-                    self.start_cleaning(cleaning_type)
-                    break
+            return
+
+        cleaning_type = self.current_cleaning
+        if current_step_in_day == self.next_cleaning[cleaning_type]:
+            print(f"Cleaning triggered: {cleaning_type} at step {current_step_in_day}")
+            self.start_cleaning(cleaning_type)
+            self.next_cleaning[cleaning_type] = (
+                (current_step_in_day + self.cleaning_schedule[cleaning_type]['frequency'])
+                % self.model.steps_per_day
+            )
 
     def start_cleaning(self, cleaning_type):
         """Start a new cleaning cycle"""
         self.current_cleaning = cleaning_type
         self.cleaning_steps_remaining = self.cleaning_schedule[cleaning_type]['duration']
-        
-        self.next_cleaning_steps[cleaning_type] = (
-            (self.model.current_step_in_day + self.cleaning_schedule[cleaning_type]['frequency']) 
-            % self.model.steps_per_day
-        )
-        
         self.apply_cleaning_effects()
 
     def apply_cleaning_effects(self):
         """Apply the effects of current cleaning"""
-        if self.current_cleaning:
-            reduction = self.cleaning_schedule[self.current_cleaning]['infection_reduction']
-            for i in range(len(self.section_infection_levels)):
-                self.section_infection_levels[i] *= (1 - reduction)
+        if not self.current_cleaning:
+            return
+            
+        schedule = self.cleaning_schedule[self.current_cleaning]
+        
+        reduction = schedule['infection_reduction']
+        for i in range(len(self.section_infection_levels)):
+            self.section_infection_levels[i] *= (1 - reduction)
 
+    def set_cleaning_type(self, cleaning_type):
+        """Change the cleaning type"""
+        if cleaning_type in self.cleaning_schedule:
+            self.current_cleaning = cleaning_type
+            self.cleaning_steps_remaining = 0
     
+    def get_cleaning_productivity_modifier(self):
+        """Calculate productivity modifier based on current cleaning status"""
+        if self.cleaning_steps_remaining > 0 and self.current_cleaning:
+            return 1 - self.cleaning_schedule[self.current_cleaning]['production_reduction']
+        return 1.0

@@ -18,20 +18,24 @@ class factory_model(Model):
         self.schedule = RandomActivation(self)
         self.visualization = visualization
 
-        # Initialize managers
-        self.quarantine = QuarantineManager(self)
-        self.grid_manager = GridManager(self)
-        self.stats = StatsCollector(self)
-        self.testing = TestingManager(self)
         
         # Policy parameters
         self.mask_mandate = False
         self.social_distancing = False
         self.num_vaccinated = 0
+        self.initial_cleaning = 'heavy'
+        self.test_lvl = 'none'
+
+        # Initialize managers
+        self.quarantine = QuarantineManager(self)
+        self.grid_manager = GridManager(self)
+        self.stats = StatsCollector(self)
+        self.testing = TestingManager(self)
+        self.testing.set_testing_level(self.test_lvl)
 
         # Time parameters
         self.steps_per_day = 24
-        self.shifts_per_day = 3
+        self.shifts_per_day = 4
         self.steps_per_shift = self.steps_per_day // self.shifts_per_day
         self.next_shift_change = self.steps_per_shift
 
@@ -39,13 +43,7 @@ class factory_model(Model):
         self.current_step_in_day = 0
         self.current_day = 0
         self.current_shift = 0 
-
-        # Testing schedule
-        self.testing.set_testing_level('medium')
-        
-    
-        self.initialize_cleaning_schedule()
-        
+            
         self.initialize_agents()
         self.initialize_datacollector()
         
@@ -68,49 +66,18 @@ class factory_model(Model):
             worker.set_base_position(pos)
             worker.last_section = section_index
 
-    def initialize_cleaning_schedule(self):
-        """Initialize the cleaning schedule with proper intervals"""
-        self.cleaning_schedules = {
-            'light': {'next_step': 8, 'frequency': 8},
-            'medium': {'next_step': 16, 'frequency': 16},
-            'heavy': {'next_step': 24, 'frequency': 24}
-        }
-        self.active_cleaning = None
-        self.cleaning_steps_remaining = 0
-
     def initialize_datacollector(self):
         self.datacollector = DataCollector({
             "Healthy": lambda m: m.stats.count_health_status("healthy"),
             "Infected": lambda m: m.stats.count_health_status("infected"),
             "Recovered": lambda m: m.stats.count_health_status("recovered"),
-            "Productivity": lambda m: m.stats.calculate_productivity() * m.testing.get_productivity_modifier(),            "Quarantined": lambda m: len(m.quarantine.quarantine_zone),
+            "Productivity": lambda m: (m.stats.calculate_productivity() * 
+                                     m.testing.get_productivity_modifier() * 
+                                     m.grid_manager.get_cleaning_productivity_modifier()),
+            "Quarantined": lambda m: len(m.quarantine.quarantine_zone),
             "Daily Infections": lambda m: m.stats.daily_infections
         })
-    
-    def update_testing_config(self, config):
-        """Update testing configuration with provided settings"""
-        for level, settings in config.items():
-            if level in self.testing_config:
-                self.testing_config[level].update(settings)
 
-    def configure_testing_schedules(self):
-        """Configure testing schedules based on current configuration"""
-        testing_schedules = {}
-        for level, settings in self.testing_config.items():
-            if level != 'none' and settings.get('enabled', False):
-                frequency = settings.get('frequency', self.testing.testing_schedules[level]['frequency'])
-                testing_schedules[level] = {
-                    'next_step': frequency,
-                    'frequency': frequency
-                }
-    def should_run_cleaning(self, cleaning_type):
-        """Check if cleaning should be performed"""
-        if self.active_cleaning is None:
-            schedule = self.cleaning_schedules[cleaning_type]
-            if self.current_step_in_day == schedule['next_step']:
-                schedule['next_step'] = (self.current_step_in_day + schedule['frequency']) % self.steps_per_day
-                return True
-        return False
     
     def should_change_shift(self):
         """Check if shift change should occur"""
@@ -153,14 +120,7 @@ class factory_model(Model):
     
     def process_scheduled_events(self):
         """Process all scheduled events in the correct order"""
-        if self.grid_manager.current_cleaning is None:
-            for cleaning_type in ['heavy', 'medium', 'light']:
-                if self.should_run_cleaning(cleaning_type):
-                    self.grid_manager.start_cleaning(cleaning_type)
-                    break 
-        if self.grid_manager.current_cleaning:
-            self.grid_manager.process_cleaning()
-            
+        self.grid_manager.process_cleaning(self.current_step_in_day)
         for testing_type in ['light', 'medium', 'heavy']:
             if self.testing.should_run_testing(testing_type):
                 self.testing.process_testing(testing_type)
@@ -180,6 +140,9 @@ class factory_model(Model):
         return self.grid_manager.splitting_level
     
     def _get_step_results(self, new_infections, action_cost, total_infected):
+        base_productivity = self.stats.calculate_productivity()
+        cleaning_modifier = self.grid_manager.get_cleaning_productivity_modifier()
+        testing_modifier = self.testing.get_productivity_modifier()
         
         return (
             self.stats.get_state(),
@@ -189,10 +152,10 @@ class factory_model(Model):
                 'step_in_day': self.current_step_in_day,
                 'new_infections': new_infections,
                 'total_infected': total_infected,
-                'productivity': self.stats.calculate_productivity(),
+                'productivity': base_productivity * cleaning_modifier * testing_modifier,
                 'quarantined': len(self.quarantine.quarantine_zone),
                 'action_cost': action_cost,
-                'base_production': self.stats.calculate_productivity() * 2.0,
+                'base_production': base_productivity * 2.0,
                 'infection_penalty': -2.0 * (new_infections / self.num_agents)
             }
         )
