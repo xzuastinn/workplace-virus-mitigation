@@ -37,6 +37,21 @@ class factory_model(Model):
         self.shifts_per_day = 3
         self.steps_per_shift = self.steps_per_day // self.shifts_per_day
         self.next_shift_change = self.steps_per_shift
+        self.current_step = 0
+        self.current_step_in_day = 0
+        self.current_day = 0
+        self.current_shift = 0 
+
+        # Testing schedule
+        self.test_frequency = 20
+        self.last_test_step = 0
+        self.next_test_step = self.test_frequency
+        
+        # Shift change schedule
+        self.next_shift_change = self.steps_per_shift
+        
+        # Cleaning schedule initialization
+        self.initialize_cleaning_schedule()
         
         self.initialize_agents()
         self.initialize_datacollector()
@@ -60,6 +75,14 @@ class factory_model(Model):
             worker.set_base_position(pos)
             worker.last_section = section_index
 
+    def initialize_cleaning_schedule(self):
+        """Initialize the cleaning schedule with proper intervals"""
+        self.cleaning_schedules = {
+            'light': {'next_step': 8, 'frequency': 8},
+            'medium': {'next_step': 16, 'frequency': 16},
+            'heavy': {'next_step': 24, 'frequency': 24}
+        }
+
     def initialize_datacollector(self):
         self.datacollector = DataCollector({
             "Healthy": lambda m: m.stats.count_health_status("healthy"),
@@ -71,31 +94,39 @@ class factory_model(Model):
         })
 
     def should_run_testing(self):
-        current_step = self.schedule.steps
-        if current_step >= self.next_test_step:
-            self.next_test_step = current_step + self.test_frequency
+        """Improved testing schedule check"""
+        if self.current_step >= self.next_test_step:
+            self.last_test_step = self.current_step
+            self.next_test_step = self.current_step + self.test_frequency
             return True
         return False
+    
+    def should_run_cleaning(self, cleaning_type):
+        """Check if cleaning should be performed"""
+        schedule = self.cleaning_schedules[cleaning_type]
+        if self.current_step_in_day == schedule['next_step']:
+            schedule['next_step'] = (self.current_step_in_day + schedule['frequency']) % self.steps_per_day
+            return True
+        return False
+    
+    def should_change_shift(self):
+        """Check if shift change should occur"""
+        return self.current_step_in_day == self.next_shift_change
 
     def step(self, action=None):
-        self.current_step_in_day = self.schedule.steps % self.steps_per_day
+        self.current_step += 1
+        self.current_step_in_day = self.current_step % self.steps_per_day
         
+        if self.current_step_in_day == 0:
+            self.current_day += 1
+            
         if not self.visualization and action is not None:
             action_cost = self.grid_manager.apply_action(action)
         else:
             action_cost = 0
+            
+        self.process_scheduled_events()
         
-        self.grid_manager.process_cleaning()
-
-        if self.should_run_testing():
-            print(f"Running factory tests at step {self.schedule.steps}")  # Debug print
-            self.testing.process_testing()
-
-        self.quarantine.process_quarantine()
-        
-        if self.current_step_in_day == self.next_shift_change:
-            self.grid_manager.process_shift_change()
-
         pre_step_infected = self.stats.count_health_status("infected")
         self._process_agent_steps()
         post_step_infected = self.stats.count_health_status("infected")
@@ -117,6 +148,25 @@ class factory_model(Model):
                 self.grid_manager.move_agent_social_distance(agent)
             agent.step()
     
+    def process_scheduled_events(self):
+        """Process all scheduled events in the correct order"""
+        for cleaning_type in ['light', 'medium', 'heavy']:
+            if self.should_run_cleaning(cleaning_type):
+                self.grid_manager.start_cleaning(cleaning_type)
+        
+        if self.grid_manager.current_cleaning:
+            self.grid_manager.process_cleaning()
+            
+        if self.should_run_testing():
+            print(f"Running factory tests at step {self.current_step}")
+            self.testing.process_testing()
+            
+        self.quarantine.process_quarantine()
+        
+        if self.should_change_shift():
+            self.grid_manager.process_shift_change()
+            self.next_shift_change = (self.current_step_in_day + self.steps_per_shift) % self.steps_per_day
+
     def get_steps_per_shift(self):
         return self.steps_per_shift
     
