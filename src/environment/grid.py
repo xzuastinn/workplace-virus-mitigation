@@ -2,9 +2,9 @@ import random
 
 
 class GridManager:
-    def __init__(self, model):
+    def __init__(self, initial_splitting_level, model):
         self.model = model
-        self.splitting_level = 1 # 0 full grid, 1 half, 2 quarter, 3 eights
+        self._splitting_level = initial_splitting_level # 0 full grid, 1 half, 2 quarter, 3 eights
         self.splitting_costs = {0: 0.0, 1: 0.1, 2: 0.2, 3: 0.3}
         self.section_boundaries = []
         self.cleaning_schedule = {
@@ -35,15 +35,15 @@ class GridManager:
             'heavy': 16
         }
         self.update_section_boundaries()
-        self.section_infection_levels = [0] * (2 ** self.splitting_level if self.splitting_level > 0 else 1)
+        self.section_infection_levels = [0] * (2 ** self._splitting_level if self._splitting_level > 0 else 1)
         
     def update_section_boundaries(self):
         self.section_boundaries = []
-        if self.splitting_level >= 1:
+        if self._splitting_level >= 1:
             self.section_boundaries.append(self.model.grid.width // 2)
-        if self.splitting_level >= 2:
+        if self._splitting_level >= 2:
             self.section_boundaries.extend([self.model.grid.width // 4, 3 * self.model.grid.width // 4])
-        if self.splitting_level >= 3:
+        if self._splitting_level >= 3:
             self.section_boundaries.extend([
                 self.model.grid.width // 8,
                 3 * self.model.grid.width // 8,
@@ -52,11 +52,11 @@ class GridManager:
             ])
         self.section_boundaries = sorted(list(set(self.section_boundaries)))
         
-        num_sections = 2 ** self.splitting_level if self.splitting_level > 0 else 1
+        num_sections = 2 ** self._splitting_level if self._splitting_level > 0 else 1
         self.section_infection_levels = [0] * num_sections
     
     def get_section_for_agent(self, agent_id):
-        num_sections = 2 ** self.splitting_level if self.splitting_level > 0 else 1
+        num_sections = 2 ** self._splitting_level if self._splitting_level > 0 else 1
         return f'section_{agent_id // (self.model.num_agents // num_sections)}'
     
     def get_random_positions(self, num_positions):
@@ -66,20 +66,20 @@ class GridManager:
         return positions[:num_positions]
         
     def get_section_index(self, x_coord):
-        if self.splitting_level == 0:
+        if self._splitting_level == 0:
             return 0
             
-        num_sections = 2 ** self.splitting_level
+        num_sections = 2 ** self._splitting_level
         section_width = max(1, self.model.grid.width // num_sections)
         section_index = min(x_coord // section_width, num_sections - 1)
         return section_index
     
     def get_valid_position(self, agent):
         section = (getattr(agent, 'last_section', None) or 
-                  self.model.random.randrange(2 ** self.splitting_level) if self.splitting_level > 0 else 0)
+                  self.model.random.randrange(2 ** self._splitting_level) if self._splitting_level > 0 else 0)
         
-        section_width = (self.model.grid.width // (2 ** self.splitting_level) 
-                        if self.splitting_level > 0 else self.model.grid.width)
+        section_width = (self.model.grid.width // (2 ** self._splitting_level) 
+                        if self._splitting_level > 0 else self.model.grid.width)
         x_start = section * section_width
         
         new_x = self.model.random.randrange(x_start, x_start + section_width)
@@ -103,7 +103,7 @@ class GridManager:
         for agent in active_agents:
             current_section_index = self.get_section_index(agent.pos[0])
             
-            section_width = self.model.grid.width // (2 ** self.splitting_level if self.splitting_level > 0 else 1)
+            section_width = self.model.grid.width // (2 ** self._splitting_level if self._splitting_level > 0 else 1)
             section_start = current_section_index * section_width
             section_end = section_start + section_width
 
@@ -133,30 +133,6 @@ class GridManager:
                 self.model.schedule.remove(agent)
 
         self.model.next_shift_change = ((self.model.current_step_in_day + self.model.steps_per_shift) % self.model.steps_per_day)
-                                        
-    def apply_action(self, action):
-        action_cost = 0
-        if action == 0:
-            self.model.mask_mandate = not self.model.mask_mandate
-            action_cost = 0.1 if self.model.mask_mandate else 0
-        elif action == 1:
-            self.model.social_distancing = not self.model.social_distancing
-            action_cost = 0.15 if self.model.social_distancing else 0
-        elif action == 2:
-            before_vaccinated = self.model.num_vaccinated
-            self.model.num_vaccinated = min(self.model.num_agents, 
-                                          self.model.num_vaccinated + 5)
-            newly_vaccinated = self.model.num_vaccinated - before_vaccinated
-            action_cost = 0.05 * newly_vaccinated
-        elif action == 3:
-            old_level = self.splitting_level
-            self.splitting_level = (self.splitting_level + 1) % 4
-            self.update_section_boundaries()
-            action_cost = self.splitting_costs[self.splitting_level]
-            
-            if old_level > self.splitting_level:
-                self.redistribute_agents()
-        return action_cost
         
     def redistribute_agents(self):
         for agent in self.model.schedule.agents:
@@ -227,3 +203,18 @@ class GridManager:
         if self.cleaning_steps_remaining > 0 and self.current_cleaning:
             return 1 - self.cleaning_schedule[self.current_cleaning]['production_reduction']
         return 1.0
+    
+    @property
+    def splitting_level(self):
+        """Get current splitting level"""
+        return self._splitting_level
+
+    def update_splitting_level(self, value):
+        """Update splitting level and related configurations"""
+        if self._splitting_level != value:
+            self._splitting_level = value
+            self.update_section_boundaries()
+            num_sections = 2 ** self._splitting_level if self._splitting_level > 0 else 1
+            self.section_infection_levels = [0] * num_sections
+            if hasattr(self.model, 'schedule') and self.model.schedule is not None:
+                self.redistribute_agents()

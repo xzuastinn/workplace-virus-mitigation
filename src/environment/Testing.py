@@ -118,3 +118,43 @@ class TestingManager:
             if test_positive:
                 self.model.quarantine.quarantine_agent(agent)
             self.tests_performed += 1
+
+class TestingPolicyHandler:
+    """
+    Handles testing policy changes and validation for the factory model
+    """
+    VALID_TESTING_LEVELS = ['none', 'light', 'medium', 'heavy']
+    
+    def __init__(self, model):
+        self.model = model
+        
+    def apply_testing_action(self, action):
+        """
+        Apply a testing policy action
+        
+        Parameters:
+        action (int): Integer representing testing level
+            0: none
+            1: light
+            2: medium
+            3: heavy
+        
+        Returns:
+        bool: Whether the action was successfully applied
+        """
+        if not isinstance(action, int) or action < 0 or action > 3:
+            return False
+            
+        testing_level = self.VALID_TESTING_LEVELS[action]
+        self.model.test_lvl = testing_level
+        self.model.testing.set_testing_level(testing_level)
+        return True
+        
+    def get_current_testing_level_index(self):
+        """
+        Get the current testing level as an integer index
+        
+        Returns:
+        int: Current testing level index (0-3)
+        """
+        return self.VALID_TESTING_LEVELS.index(self.model.test_lvl)

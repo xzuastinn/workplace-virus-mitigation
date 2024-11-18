@@ -5,40 +5,50 @@ from mesa.time import RandomActivation
 from mesa.datacollection import DataCollector
 from WorkerAgent import worker_agent
 from Quarantine import QuarantineManager
+from config import FactoryConfig
 from grid import GridManager
 from Stats import StatsCollector
 from Testing import TestingManager
+from Testing import TestingPolicyHandler
 
 class factory_model(Model):
-    def __init__(self, width, height, N, visualization=False):
+    def __init__(self, width, height, N, visualization=False, config=None):
         super().__init__()
+        if config is None:
+            config = FactoryConfig(
+                width=width,
+                height=height,
+                num_agents=N,
+                visualization=visualization
+            )
         # Base model parameters
-        self.num_agents = N
-        self.grid = MultiGrid(width, height, torus=True)
+        self.num_agents = config.num_agents
+        self.grid = MultiGrid(config.width, config.height, torus=True)
         self.schedule = RandomActivation(self)
-        self.visualization = visualization
+        self.visualization = config.visualization
 
-        
         # Policy parameters
-        self.mask_mandate = False
-        self.social_distancing = True
+        self.mask_mandate = config.mask_mandate
+        self.social_distancing = config.social_distancing
         self.num_vaccinated = 0
-        self.initial_cleaning = 'heavy'
-        self.test_lvl = 'light'
+        self.initial_cleaning = config.cleaning_type
+        self.test_lvl = config.testing_level
+        self._splitting_level = config.splitting_level
+
+        # Shift Parameters 
+        self.steps_per_day = config.steps_per_day
+        self.shifts_per_day = config.shifts_per_day
+        self.steps_per_shift = config.steps_per_shift
+        self.next_shift_change = self.steps_per_shift
 
         # Initialize managers
         self.quarantine = QuarantineManager(self)
-        self.grid_manager = GridManager(self)
+        self.grid_manager = GridManager(self._splitting_level, self)
         self.stats = StatsCollector(self)
         self.testing = TestingManager(self)
         self.testing.set_testing_level(self.test_lvl)
 
-        # Time parameters
-        self.steps_per_day = 24
-        self.shifts_per_day = 4
-        self.steps_per_shift = self.steps_per_day // self.shifts_per_day
-        self.next_shift_change = self.steps_per_shift
-
+        #Time tracking variables
         self.current_step = 0
         self.current_step_in_day = 0
         self.current_day = 0
@@ -75,7 +85,9 @@ class factory_model(Model):
                                      m.testing.get_productivity_modifier() * 
                                      m.grid_manager.get_cleaning_productivity_modifier()),
             "Quarantined": lambda m: len(m.quarantine.quarantine_zone),
-            "Daily Infections": lambda m: m.stats.daily_infections
+            "Daily Infections": lambda m: m.stats.daily_infections,
+            "Current Shift": lambda m: m.current_shift,
+            "Shifts Per Day": lambda m: m.shifts_per_day
         })
 
     
@@ -89,11 +101,6 @@ class factory_model(Model):
         
         if self.current_step_in_day == 0:
             self.current_day += 1
-            
-        if not self.visualization and action is not None:
-            action_cost = self.grid_manager.apply_action(action)
-        else:
-            action_cost = 0
             
         self.process_scheduled_events()
 
@@ -112,7 +119,7 @@ class factory_model(Model):
         self.testing.current_productivity_impact = 0
 
         if not self.visualization:
-            return self._get_step_results(new_infections, action_cost, post_step_infected)
+            return self._get_step_results(new_infections, post_step_infected)
             
     def _process_agent_steps(self):
         for agent in self.schedule.agents:
@@ -136,12 +143,32 @@ class factory_model(Model):
     def get_steps_per_shift(self):
         return self.steps_per_shift
     
+    def set__splitting_level(self, level):
+        """Set the grid splitting level dynamically."""
+        if level < 0 or level > 3:
+            raise ValueError("Splitting level must be between 0 and 3.")
+        self._splitting_level = level
+        self.grid_manager.splitting_level = level
+    
+    def get__splitting_level(self):
+        """Get the current splitting level."""
+        return self._splitting_level
+    
     @property
     def splitting_level(self):
         """Access splitting level through grid manager"""
-        return self.grid_manager.splitting_level
+        return self._splitting_level
     
-    def _get_step_results(self, new_infections, action_cost, total_infected):
+    @splitting_level.setter
+    def splitting_level(self, value):
+        """Setter for splitting level that updates both factory and grid manager"""
+        if not isinstance(value, int) or value < 0 or value > 3:
+            raise ValueError("Splitting level must be an integer between 0 and 3")
+        self._splitting_level = value
+        if hasattr(self, 'grid_manager'):
+            self.grid_manager.update_splitting_level(value)
+
+    def _get_step_results(self, new_infections, total_infected):
         base_productivity = self.stats.calculate_productivity()
         cleaning_modifier = self.grid_manager.get_cleaning_productivity_modifier()
         testing_modifier = self.testing.get_productivity_modifier()
@@ -156,8 +183,52 @@ class factory_model(Model):
                 'total_infected': total_infected,
                 'productivity': base_productivity * cleaning_modifier * testing_modifier,
                 'quarantined': len(self.quarantine.quarantine_zone),
-                'action_cost': action_cost,
                 'base_production': base_productivity * 2.0,
                 'infection_penalty': -2.0 * (new_infections / self.num_agents)
             }
         )
+
+    def set_splitting_level(self, value):
+        """Public method to set splitting level"""
+        self.splitting_level = value
+    
+    def get_splitting_level(self):
+        """Public method to get splitting level"""
+        return self.splitting_level
+    
+    def update_config(self, action_dict):
+        """Update model configuration based on RL action"""
+        config = FactoryConfig(
+            cleaning_type=self.initial_cleaning,
+            splitting_level=self._splitting_level,
+            testing_level=self.test_lvl,
+            social_distancing=self.social_distancing,
+            mask_mandate=self.mask_mandate,
+            shifts_per_day=self.shifts_per_day,
+            steps_per_day=self.steps_per_day,
+            visualization=self.visualization
+        )
+        
+        old_shifts = config.shifts_per_day
+        
+        config.update_from_action(action_dict)
+        
+        self.initial_cleaning = config.cleaning_type
+        self.grid_manager.set_cleaning_type(config.cleaning_type)
+        
+        self.splitting_level = config.splitting_level
+        self.test_lvl = config.testing_level
+        self.testing.set_testing_level(config.testing_level)
+        
+        self.social_distancing = config.social_distancing
+        self.mask_mandate = config.mask_mandate
+        
+        if old_shifts != config.shifts_per_day:
+            self.shifts_per_day = config.shifts_per_day
+            self.steps_per_shift = config.steps_per_shift
+            self.next_shift_change = (
+                (self.current_step_in_day // self.steps_per_shift + 1) * 
+                self.steps_per_shift
+            ) % self.steps_per_day
+            
+            self.grid_manager.process_shift_change()

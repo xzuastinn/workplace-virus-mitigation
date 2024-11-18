@@ -1,6 +1,7 @@
 from mesa.visualization.modules import CanvasGrid, ChartModule
 from mesa.visualization.ModularVisualization import ModularServer
 from FactoryModel import factory_model
+from config import FactoryConfig
 
 def agent_portrayal(agent):
     """Defines how agents appear in the visualization."""
@@ -40,11 +41,19 @@ prod_chart = ChartModule([
 daily_infections_chart = ChartModule([
     {"Label": "Daily Infections", "Color": "Red"}
 ], data_collector_name='datacollector')
+
+viz_config = FactoryConfig.get_default_viz_config()
+
+
 server = ModularServer(
     factory_model,
     [grid, chart, prod_chart, daily_infections_chart],
     "Factory Infection Model",
-    {"width": GRID_WIDTH, "height": GRID_HEIGHT, "N": 60, "visualization": True}
+    {"width": GRID_WIDTH, 
+     "height": GRID_HEIGHT, 
+     "N": 60, 
+     "visualization": True,
+     "config": viz_config}
 )
 
 server.port = 8511
