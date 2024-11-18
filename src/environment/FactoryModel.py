@@ -30,7 +30,6 @@ class factory_model(Model):
         # Policy parameters
         self.mask_mandate = config.mask_mandate
         self.social_distancing = config.social_distancing
-        self.num_vaccinated = 0
         self.initial_cleaning = config.cleaning_type
         self.test_lvl = config.testing_level
         self._splitting_level = config.splitting_level

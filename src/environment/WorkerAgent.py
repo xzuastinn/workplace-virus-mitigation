@@ -231,18 +231,22 @@ class worker_agent(Agent):
             4: 1.0    # Four shifts - no reduction
         }.get(self.model.shifts_per_day, 1.0)
         production *= shift_penalty
+        
+        splitting_level_penalties = {
+            0: 1.0,   # No penalty for full grid
+            1: 0.90,  # 10% penalty for half grid
+            2: 0.80,  # 20% penalty for quarter grid
+            3: 0.65   # 35% penalty for eighth grid
+        }
+        production *= splitting_level_penalties.get(self.model.splitting_level, 1.0)
 
         if self.model.mask_mandate:
             production *= 0.95 
         if self.model.social_distancing:
             production *= 0.90  
 
-        if self.unique_id < self.model.num_vaccinated:
-            production *= 1.05 
-
         if self.is_quarantined:
             production = 0
-            
 
         self.current_production = production
 

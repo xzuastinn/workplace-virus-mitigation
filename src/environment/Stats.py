@@ -38,7 +38,6 @@ class StatsCollector:
             self.count_health_status("healthy"),
             self.count_health_status("infected"),
             self.count_health_status("recovered"),
-            self.model.num_vaccinated
         ]
         
     def is_done(self):
