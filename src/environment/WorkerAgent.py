@@ -224,6 +224,14 @@ class worker_agent(Agent):
         elif self.health_status == "recovered":
             production *= 0.95 
 
+        shift_penalty = {
+            1: 0.6,   # One shift - 40% penalty
+            2: 0.8,   # Two shifts - 20% reduction
+            3: 0.9,   # Three shifts - 10% reduction
+            4: 1.0    # Four shifts - no reduction
+        }.get(self.model.shifts_per_day, 1.0)
+        production *= shift_penalty
+
         if self.model.mask_mandate:
             production *= 0.95 
         if self.model.social_distancing:
@@ -235,8 +243,7 @@ class worker_agent(Agent):
         if self.is_quarantined:
             production = 0
             
-        if self.model.grid_manager.current_cleaning:
-            production *= 0.5
+
         self.current_production = production
 
     def get_manhattan_distance(self, pos1, pos2):

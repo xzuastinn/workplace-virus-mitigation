@@ -40,9 +40,6 @@ class factory_model(Model):
         self.shifts_per_day = config.shifts_per_day
         self.steps_per_shift = config.steps_per_shift
         self.next_shift_change = self.steps_per_shift
-        self.shift_change_penalty_base = 1
-        self.shift_change_recovery_rate = 0.1
-        self.current_shift_penalty = 0.0
 
         # Initialize managers
         self.quarantine = QuarantineManager(self)
@@ -86,8 +83,7 @@ class factory_model(Model):
             "Recovered": lambda m: m.stats.count_health_status("recovered"),
             "Productivity": lambda m: (m.stats.calculate_productivity() * 
                                      m.testing.get_productivity_modifier() * 
-                                     m.grid_manager.get_cleaning_productivity_modifier() *
-                                     m.get_shift_productivity_modifier()),
+                                     m.grid_manager.get_cleaning_productivity_modifier()),
             #"Productivity": lambda m: m.get_shift_productivity_modifier(), #debugging
             "Quarantined": lambda m: len(m.quarantine.quarantine_zone),
             "Daily Infections": lambda m: m.stats.daily_infections,
@@ -108,7 +104,6 @@ class factory_model(Model):
             self.current_day += 1
             
         self.process_scheduled_events()
-        self.update_shift_penalty()
 
         pre_step_infected = self.stats.count_health_status("infected")
         self._process_agent_steps()
@@ -148,30 +143,6 @@ class factory_model(Model):
 
     def get_steps_per_shift(self):
         return self.steps_per_shift
-    
-    def calculate_shift_change_penalty(self):
-        """Calculate the production penalty based on number of shifts"""
-        shift_penalty_multiplier = {
-            1: 2.0,  # One shift has highest penalty
-            2: 1.5,  # Two shifts have medium penalty
-            3: 1.2,  # Three shifts have lower penalty
-            4: 1.0   # Four shifts have base penalty
-        }.get(self.shifts_per_day, 1.0)
-        
-        return self.shift_change_penalty_base * shift_penalty_multiplier
-    
-    def update_shift_penalty(self):
-        if self.should_change_shift():
-            self.current_shift_penalty = self.calculate_shift_change_penalty()
-        else:
-            self.current_shift_penalty = max(
-                0.0,
-                self.current_shift_penalty - self.shift_change_recovery_rate
-            )
-    
-    def get_shift_productivity_modifier(self):
-        """Get the productivity modifier from shift changes"""
-        return 1.0 - self.current_shift_penalty
 
     @property
     def splitting_level(self):
@@ -192,12 +163,10 @@ class factory_model(Model):
         base_productivity = self.stats.calculate_productivity()
         cleaning_modifier = self.grid_manager.get_cleaning_productivity_modifier()
         testing_modifier = self.testing.get_productivity_modifier()
-        shift_modifier = self.get_shift_productivity_modifier()
         
         final_productivity = (base_productivity * 
                             cleaning_modifier * 
-                            testing_modifier * 
-                            shift_modifier)
+                            testing_modifier)
         
         return (
             self.stats.get_state(),
@@ -211,8 +180,6 @@ class factory_model(Model):
                 'quarantined': len(self.quarantine.quarantine_zone),
                 'base_production': base_productivity,
                 'infection_penalty': -2.0 * (new_infections / self.num_agents),
-                'shift_penalty': self.current_shift_penalty,
-                'shift_modifier': shift_modifier,
                 'cleaning_modifier': cleaning_modifier,
                 'testing_modifier': testing_modifier
             }
