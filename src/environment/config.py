@@ -36,7 +36,7 @@ class FactoryConfig:
             testing_level='light',
             social_distancing=True,
             mask_mandate=True,
-            shifts_per_day=4,
+            shifts_per_day=2,
             steps_per_day=24,
             visualization=True
         )
@@ -50,7 +50,7 @@ class FactoryConfig:
             testing_level='none',
             social_distancing=False,
             mask_mandate=False,
-            shifts_per_day=2,
+            shifts_per_day=4,
             steps_per_day=24,
             visualization=False
         )
