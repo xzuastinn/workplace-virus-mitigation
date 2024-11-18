@@ -9,7 +9,6 @@ from config import FactoryConfig
 from grid import GridManager
 from Stats import StatsCollector
 from Testing import TestingManager
-from Testing import TestingPolicyHandler
 
 class factory_model(Model):
     def __init__(self, width, height, N, visualization=False, config=None):
@@ -185,11 +184,23 @@ class factory_model(Model):
         )
     
     def update_config(self, action_dict):
-        self.initial_cleaning = action_dict.get("cleaning_type", self.initial_cleaning)
-        self.splitting_level = action_dict.get("splitting_level", self.splitting_level)
-        self.test_lvl = action_dict.get("testing_level", self.test_lvl)
-        self.social_distancing = action_dict.get("social_distancing", self.social_distancing)
-        self.mask_mandate = action_dict.get("mask_mandate", self.mask_mandate)
+        if "cleaning_type" in action_dict:
+            self.initial_cleaning = action_dict["cleaning_type"]
+            self.grid_manager.set_cleaning_type(action_dict["cleaning_type"])
+        
+        if "splitting_level" in action_dict:
+            self.splitting_level = action_dict["splitting_level"]
+        
+        if "testing_level" in action_dict:
+            self.test_lvl = action_dict["testing_level"]
+            self.testing.set_testing_level(action_dict["testing_level"])
+        
+        if "social_distancing" in action_dict:
+            self.social_distancing = action_dict["social_distancing"]
+        
+        if "mask_mandate" in action_dict:
+            self.mask_mandate = action_dict["mask_mandate"]
+        
         if "shifts_per_day" in action_dict:
             self.shifts_per_day = action_dict["shifts_per_day"]
             self.steps_per_shift = self.steps_per_day // self.shifts_per_day

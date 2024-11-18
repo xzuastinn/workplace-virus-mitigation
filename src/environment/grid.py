@@ -168,7 +168,7 @@ class GridManager:
 
         cleaning_type = self.current_cleaning
         if current_step_in_day == self.next_cleaning[cleaning_type]:
-            print(f"Cleaning triggered: {cleaning_type} at step {current_step_in_day}")
+            print(f"Cleaning triggered: {cleaning_type} at step in day {current_step_in_day}")
             self.start_cleaning(cleaning_type)
             self.next_cleaning[cleaning_type] = (
                 (current_step_in_day + self.cleaning_schedule[cleaning_type]['frequency'])
