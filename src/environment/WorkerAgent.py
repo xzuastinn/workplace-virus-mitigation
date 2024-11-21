@@ -82,7 +82,7 @@ class worker_agent(Agent):
     
 
     def update_base_position(self):
-        """Update the base position after n steps."""
+        """Update the base position within the agent's section after a shift change."""
         x_start, x_end = self.get_section_bounds()
         
         x_start = max(0, min(x_start, self.model.grid.width - 1))

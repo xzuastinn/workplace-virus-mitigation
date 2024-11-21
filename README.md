@@ -1,14 +1,31 @@
-# Simulating the Spread of COVID-19 in a Large Population Environment like a Workplace
+# Simulating the Spread of COVID-19 in a Largely Populated Workforce
 
-`Model.py` is the script we use to create our simulation by adding agents to the grid.
+`FactoryModel.py` Class that implements a comprehensive simulation of a factory environment. Simulation looks at the intersection of worker health, productivity, and health policy measures a factory owner can implement. Key parameters that we look at are: mask mandates, social distancing mandate, testing levels, cleaning protocols, and plexiglass dividers to split the factory floor into sections. 
 
-`Agent.py` is the script we use to create our agent class and give it properties and rules on how it can move.
+`config.py` Configuration manager for the factory simulation providing flexibility to tweek the model parameters listed above. Has static configurations for the server visualization and running a RL model of the environment. Allows dynamic updates to the simulation's configurations allowing the RL model to update health protocols for the factory. 
 
-`Run.py` runs the model with no visualization
+`grid.py` Manages the grid environment of the factory simulation. Organizes the workplace into configurable sections, determines agent placement, and manages section infection level and cleaning processes. Cleaning levels reduce section infection level at the cost of some productivity. 
 
-`Server.py` is what runs the web simulation 
+`Quarantine.py` Handles the quarantine process of agents in the simulation model. Stops the spread of an infected sick agent by putting them into quarantine where they will stay until they reach the recovered state. During time in quarantine, agents will have 0 production output. 
 
-'train.py' runs the DQN model; toggle for visualization and verbosity 
+`Run.py` runs the model with no visualization. 
+
+`Server.py` Class to run the simulation in a visual display with graphs that track the spread of the virus in real time and the result it has on the factory's production output.
+
+`Testing.py` Manages health testing procedures by using the current testing configuration to test a certain proportion of agents within the environment. Each testing level has it's own impact to productivity and how many tests get conducted and when. Integrated with Quarantine manager to send positive tested agents into quarantine. 
+
+`train.py` runs the DQN model; toggle for visualization and verbosity 
+
+`WorkerAgent.py` Class that handles all agent construction and activities during the simulation. Agents can be healthy, infected, or recovered. They have their own unique base productivity level that gets impacted based on health protocols implemented by the config.py class. Agents are assigned sections within the grid and are confined to a 2by2 workspace for each shift. 
+Infection probability to spread is calculated within this class on an agent level depending on the Manhattan distance an infected agent is from a healthy agent. 
+
+In each simulation step, the agent performs the following:
+
+Moves to a valid position within its section.
+Spreads infection to nearby agents based on proximity and environmental factors.
+Updates infection status based on time spent in each health state.
+Recalculates production output based on current conditions.
+
 
 ## Table of Contents
 
