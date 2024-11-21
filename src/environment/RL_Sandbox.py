@@ -1,8 +1,8 @@
 from FactoryModel import factory_model
 from config import FactoryConfig
 
-config = FactoryConfig.get_default_rl_config()
-model = factory_model(width=25, height=25, N=60, config=config)
+config = FactoryConfig.get_default_rl_config() #Gets the default starting rl configuration to run
+model = factory_model(width=25, height=25, N=60, config=config) #how big the grid is with N agents with a given policy configs.
 
 print("Initial Configuration:")
 print(f"Cleaning Type: {model.initial_cleaning}")

@@ -7,12 +7,12 @@ class TestingManager:
         self.tests_performed = 0
         self.last_test_step = -1
         
-        self.testing_levels = {
+        self.testing_levels = { #Parameter dictionary for testing level. PRoportion is how many agents to test out of total pop
             'light': {
                 'enabled': False,
                 'proportion': 0.2,
-                'productivity_impact': 0.15,
-                'frequency': 8
+                'productivity_impact': 0.15, #How much of an impact this testing schedule has on productivity
+                'frequency': 8 #How frequent the test schedule is ran
             },
             'medium': {
                 'enabled': False,
@@ -84,6 +84,7 @@ class TestingManager:
         
 
     def should_run_testing(self, testing_type):
+        """Helper method to compare the current step to when the next_test_step to determine if tests should be ran"""
         if not self.testing_levels[testing_type]['enabled']:
             return False
             
@@ -91,9 +92,9 @@ class TestingManager:
             self.next_test_steps[testing_type] = (
                 self.model.current_step_in_day + 
                 self.testing_levels[testing_type]['frequency']
-            ) % self.model.steps_per_day
-            return True
-        return False
+            ) % self.model.steps_per_day #Resets next_test_steps to the next testing day
+            return True #Test this step
+        return False #Dont test this step
         
     def process_testing(self, testing_intensity):
         """
@@ -110,11 +111,11 @@ class TestingManager:
                 
         self.last_test_step = current_step
 
-        agents_to_test = self.get_agents_to_test(testing_intensity)
-        self.apply_productivity_impact(testing_intensity)
+        agents_to_test = self.get_agents_to_test(testing_intensity) #Agents to test by the proportion of tests conducted on population.
+        self.apply_productivity_impact(testing_intensity) #Applies the productivity impact on the environment during a testing step
         print(f"Testing triggered: {testing_intensity} at step {current_step}")
 
-        for agent in agents_to_test:
+        for agent in agents_to_test: #Runs the test and sends positive result agents to quarantine
             test_positive = self.test_agent(agent)
             if test_positive:
                 self.model.quarantine.quarantine_agent(agent)

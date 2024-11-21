@@ -1,4 +1,6 @@
 class FactoryConfig:
+    """Class that handles the configuration for the simulation. Has base
+      visualization and base rl visualizations that can be changed"""
     def __init__(self, 
                  cleaning_type='heavy',
                  splitting_level=1,
@@ -61,11 +63,11 @@ class FactoryConfig:
         
         action_dict format:
         {
-            'cleaning': 0-2 (light, medium, heavy),
+            'cleaning': (light, medium, heavy),
             'splitting': 0-3 (none, half, quarter, eighth),
-            'testing': 0-3 (none, light, medium, heavy),
-            'social_distancing': 0-1 (False, True),
-            'mask_mandate': 0-1 (False, True),
+            'testing': (none, light, medium, heavy),
+            'social_distancing': (False, True),
+            'mask_mandate': (False, True),
             'shifts': 0-3 (maps to 1, 2, 3, or 4 shifts per day)
         }
         """

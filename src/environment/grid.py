@@ -5,7 +5,6 @@ class GridManager:
     def __init__(self, initial_splitting_level, model):
         self.model = model
         self._splitting_level = initial_splitting_level # 0 full grid, 1 half, 2 quarter, 3 eights
-        self.splitting_costs = {0: 0.0, 1: 0.1, 2: 0.2, 3: 0.3}
         self.section_boundaries = []
         self.cleaning_schedule = {
             'light': {

@@ -11,6 +11,7 @@ from Stats import StatsCollector
 from Testing import TestingManager
 
 class factory_model(Model):
+    """Main class model that sets up the environment with provided parameters and agents"""
     def __init__(self, width, height, N, visualization=False, config=None):
         super().__init__()
         if config is None:
@@ -26,14 +27,14 @@ class factory_model(Model):
         self.schedule = RandomActivation(self)
         self.visualization = config.visualization
 
-        # Policy parameters
+        # Policy parameters for RL Training
         self.mask_mandate = config.mask_mandate
         self.social_distancing = config.social_distancing
         self.initial_cleaning = config.cleaning_type
         self.test_lvl = config.testing_level
         self._splitting_level = config.splitting_level
 
-        # Shift Parameters 
+        # Shift Parameters for RL training
         self.steps_per_day = config.steps_per_day
         self.shifts_per_day = config.shifts_per_day
         self.steps_per_shift = config.steps_per_shift
@@ -56,6 +57,8 @@ class factory_model(Model):
         self.initialize_datacollector()
         
     def initialize_agents(self):
+        """Places agents in the grid and assigning them to sections. Starts the infection with a single 
+        infected agent."""
         first_infection = random.randrange(self.num_agents)
         positions = self.grid_manager.get_random_positions(self.num_agents)
         num_sections = 2 ** self.grid_manager.splitting_level if self.grid_manager.splitting_level > 0 else 1
@@ -75,6 +78,7 @@ class factory_model(Model):
             worker.last_section = section_index
     
     def initialize_datacollector(self):
+        """Collets different data to be used to track performance of the model."""
         self.datacollector = DataCollector({
             "Healthy": lambda m: m.stats.count_health_status("healthy"),
             "Infected": lambda m: m.stats.count_health_status("infected"),
@@ -95,51 +99,54 @@ class factory_model(Model):
         return self.current_step_in_day == self.next_shift_change
 
     def step(self, action=None):
+        """Proccesses a single step in the model"""
         self.current_step += 1
-        self.current_step_in_day = self.current_step % self.steps_per_day
+        self.current_step_in_day = self.current_step % self.steps_per_day 
         
         if self.current_step_in_day == 0:
             self.current_day += 1
             
-        self.process_scheduled_events()
+        self.process_scheduled_events() #Runs all the scheduled events for the current step
 
-        pre_step_infected = self.stats.count_health_status("infected")
-        self._process_agent_steps()
+        pre_step_infected = self.stats.count_health_status("infected") #helper for getting new infections
+        self._process_agent_steps() #processes all of the agents actions during this step
         post_step_infected = self.stats.count_health_status("infected")
         
         new_infections = max(0, post_step_infected - pre_step_infected)
-        self.stats.update_infections(new_infections)
+        self.stats.update_infections(new_infections) #updates the infection count and sends it to stats.
         
         if self.current_step_in_day == self.steps_per_day - 1:
-            self.stats.process_day_end()
+            self.stats.process_day_end() #Gets daily stats
             
         self.datacollector.collect(self)
         
-        self.testing.current_productivity_impact = 0
+        self.testing.current_productivity_impact = 0 #Resets the testing impact on productivity
 
         if not self.visualization:
             return self._get_step_results(new_infections, post_step_infected)
         
     def _process_agent_steps(self):
+        """Method to call each agent to get them to move in the environment for a step"""
         for agent in self.schedule.agents:
-            if self.social_distancing and agent.pos is not None:
+            if self.social_distancing and agent.pos is not None: #if social distancing is on call this function before step
                 self.grid_manager.move_agent_social_distance(agent)
-            agent.step()
+            agent.step() #step function in the agent class
     
     def process_scheduled_events(self):
         """Process all scheduled events in the correct order"""
-        self.grid_manager.process_cleaning(self.current_step_in_day)
-        for testing_type in ['light', 'medium', 'heavy']:
+        self.grid_manager.process_cleaning(self.current_step_in_day) #Call to process cleaning if correct day
+        for testing_type in ['light', 'medium', 'heavy']: 
             if self.testing.should_run_testing(testing_type):
-                self.testing.process_testing(testing_type)
+                self.testing.process_testing(testing_type) #If its a testing step, call the processing testing method in testing class
             
-        self.quarantine.process_quarantine()
+        self.quarantine.process_quarantine() #If an agent tests positive for the infection, throw them in quarantine, if they are ready to be taken out do that.
         
-        if self.should_change_shift():
-            self.grid_manager.process_shift_change()
-            self.next_shift_change = (self.current_step_in_day + self.steps_per_shift) % self.steps_per_day
+        if self.should_change_shift(): #Checks if we are on a shift change step.
+            self.grid_manager.process_shift_change() #Processes the shift change in the grid manager class.
+            self.next_shift_change = (self.current_step_in_day + self.steps_per_shift) % self.steps_per_day #Calculates the next shift change
 
     def get_steps_per_shift(self):
+        """Helper function to get the steps per shift"""
         return self.steps_per_shift
 
     @property
@@ -158,15 +165,16 @@ class factory_model(Model):
     
 
     def _get_step_results(self, new_infections, total_infected):
-        base_productivity = self.stats.calculate_productivity()
-        cleaning_modifier = self.grid_manager.get_cleaning_productivity_modifier()
-        testing_modifier = self.testing.get_productivity_modifier()
+        """Calculates the new step results after each step"""
+        base_productivity = self.stats.calculate_productivity() #Gets the current productivity value
+        cleaning_modifier = self.grid_manager.get_cleaning_productivity_modifier() #Gets the cleaning modifier if any.
+        testing_modifier = self.testing.get_productivity_modifier() #gets the testing productivity modifier if any
         
-        final_productivity = (base_productivity * 
+        final_productivity = (base_productivity * #Gets the final total productivity for the current step
                             cleaning_modifier * 
                             testing_modifier)
         
-        return (
+        return ( #Returns step data
             self.stats.get_state(),
             self.stats.is_done(),
             {
@@ -184,6 +192,7 @@ class factory_model(Model):
         )
     
     def update_config(self, action_dict):
+        """Method to update the current factor health configuration. Allows for the 6 variables to be changed during a simulation"""
         if "cleaning_type" in action_dict:
             self.initial_cleaning = action_dict["cleaning_type"]
             self.grid_manager.set_cleaning_type(action_dict["cleaning_type"])

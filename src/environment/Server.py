@@ -34,18 +34,18 @@ chart = ChartModule ([
     ]
 )
 
-prod_chart = ChartModule([    
+prod_chart = ChartModule([ #creates producivity chart for visualization
     {"Label": "Productivity", "Color": "Purple"},
 ])
 
-daily_infections_chart = ChartModule([
+daily_infections_chart = ChartModule([ #creates STEP infections chart not daily
     {"Label": "Daily Infections", "Color": "Red"}
 ], data_collector_name='datacollector')
 
 viz_config = FactoryConfig.get_default_viz_config()
 
 
-server = ModularServer(
+server = ModularServer( #Launches the visualization with provided parameters.
     factory_model,
     [grid, chart, prod_chart, daily_infections_chart],
     "Factory Infection Model",
