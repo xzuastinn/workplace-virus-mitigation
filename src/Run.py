@@ -3,6 +3,7 @@ from mesa.visualization.ModularVisualization import ModularServer
 from environment.FactoryModel import factory_model
 
 
+
 def agent_portrayal(agent):
     """Defines how agents appear in the visualization."""
     portrayal = {"Shape": "circle", "Filled": "true", "r": 0.5}
@@ -27,7 +28,7 @@ CANVAS_HEIGHT = 250
 grid = CanvasGrid(agent_portrayal, GRID_WIDTH, GRID_HEIGHT, CANVAS_WIDTH, CANVAS_HEIGHT)
 
 # Create the chart 
-chart = ChartModule = ( 
+chart = ChartModule( 
     [
         {"Label": "Healthy", "Color": "Green"},
         {"Label": "Infected", "Color": "Red"},

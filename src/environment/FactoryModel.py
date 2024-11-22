@@ -3,12 +3,12 @@ from mesa import Model
 from mesa.space import MultiGrid
 from mesa.time import RandomActivation
 from mesa.datacollection import DataCollector
-from WorkerAgent import worker_agent
-from Quarantine import QuarantineManager
-from config import FactoryConfig
-from grid import GridManager
-from Stats import StatsCollector
-from Testing import TestingManager
+from environment.WorkerAgent import worker_agent
+from environment.Quarantine import QuarantineManager
+from environment.config import FactoryConfig
+from environment.grid import GridManager
+from environment.Stats import StatsCollector
+from environment.Testing import TestingManager
 
 class factory_model(Model):
     """Main class model that sets up the environment with provided parameters and agents"""
