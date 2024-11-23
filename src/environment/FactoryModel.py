@@ -1,14 +1,20 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
+
+
+
 import random
 from mesa import Model
 from mesa.space import MultiGrid
 from mesa.time import RandomActivation
 from mesa.datacollection import DataCollector
-from environment.WorkerAgent import worker_agent
-from environment.Quarantine import QuarantineManager
-from environment.config import FactoryConfig
-from environment.grid import GridManager
-from environment.Stats import StatsCollector
-from environment.Testing import TestingManager
+from src.environment.WorkerAgent import worker_agent
+from src.environment.Quarantine import QuarantineManager
+from src.environment.config import FactoryConfig
+from src.environment.grid import GridManager
+from src.environment.Stats import StatsCollector
+from src.environment.Testing import TestingManager
 
 class factory_model(Model):
     """Main class model that sets up the environment with provided parameters and agents"""
@@ -78,7 +84,7 @@ class factory_model(Model):
             worker.last_section = section_index
     
     def initialize_datacollector(self):
-        """Collets different data to be used to track performance of the model."""
+        """Collects different data to be used to track performance of the model."""
         self.datacollector = DataCollector({
             "Healthy": lambda m: m.stats.count_health_status("healthy"),
             "Infected": lambda m: m.stats.count_health_status("infected"),

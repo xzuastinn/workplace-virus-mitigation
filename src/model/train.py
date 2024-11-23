@@ -1,6 +1,11 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
+
+
 import numpy as np
-from environment.FactoryModel import factory_model
-from model.dqn_agent import DQNAgent
+from src.environment.FactoryModel import factory_model
+from src.model.dqn_agent import DQNAgent
 
 from mesa.visualization.modules import CanvasGrid
 from mesa.visualization.ModularVisualization import ModularServer

@@ -1,8 +1,12 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
+
 import torch
 import torch.optim as optim
 import random
 from collections import deque
-from model.qNetwork import QNetwork
+from src.model.qNetwork import QNetwork
 
 class DQNAgent:
     def __init__(self, state_dim, action_dim):
