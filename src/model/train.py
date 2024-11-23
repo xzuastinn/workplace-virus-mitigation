@@ -2,7 +2,7 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
-
+import torch
 import numpy as np
 from src.environment.FactoryModel import factory_model
 from src.model.dqn_agent import DQNAgent
@@ -32,6 +32,13 @@ def agent_portrayal(agent):
 
 
 def start_visualization():
+    # model_load_path = "model/dqn_model.pth"
+    # if not os.path.exists(model_load_path):
+    #     print(f"File path {model_load_path} does not exist")
+    #     # return
+    
+    agent = DQNAgent(state_dim=4, action_dim=3)
+    # agent.load_model(model_load_path)
     grid = CanvasGrid(agent_portrayal, 20, 10, 500, 250)
     server = ModularServer(
         factory_model,
@@ -81,6 +88,8 @@ def run_training():
         if VERBOSE:
             print(f"Episode {episode + 1}/{num_episodes}, Total Reward: {total_reward}")
 
+    model_save_path = "model/dqn_model.pth"
+    agent.save_model(model_save_path)
     print("Training complete.")
 
 
