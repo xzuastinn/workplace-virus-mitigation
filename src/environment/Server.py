@@ -1,7 +1,7 @@
 from mesa.visualization.modules import CanvasGrid, ChartModule
 from mesa.visualization.ModularVisualization import ModularServer
 from FactoryModel import factory_model
-from config import FactoryConfig
+from src.environment.FactoryConfig import FactoryConfig
 
 def agent_portrayal(agent):
     """Defines how agents appear in the visualization."""
