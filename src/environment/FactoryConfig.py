@@ -5,7 +5,7 @@ class FactoryConfig:
                  cleaning_type='heavy',
                  splitting_level=1,
                  testing_level='light',
-                 social_distancing=True,
+                 social_distancing=False,
                  mask_mandate=False,
                  shifts_per_day=4,
                  steps_per_day=24,

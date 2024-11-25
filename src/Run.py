@@ -40,12 +40,23 @@ chart = ChartModule(
     ]
 )
 
+prod_chart = ChartModule([
+    {"Label": "Productivity", "Color": "Purple"},
+], data_collector_name='datacollector')
+
+
+
+
 # Create a server for the model
 server = ModularServer(
     factory_model,
-    [grid, chart],
+    [grid, chart, prod_chart],
     "Factory Infection Model",
-    {"width": GRID_WIDTH, "height": GRID_HEIGHT, "N": 75}  # Model parameters: grid size and number of agents
+    {"width": GRID_WIDTH, 
+     "height": GRID_HEIGHT, 
+     "N": 100, 
+     "visualization": True,
+     }
 )
 
 # Launch the server to visualize the environment

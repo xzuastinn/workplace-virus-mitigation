@@ -11,8 +11,8 @@ from mesa.time import RandomActivation
 from mesa.datacollection import DataCollector
 from src.environment.WorkerAgent import worker_agent
 from src.environment.Quarantine import QuarantineManager
-from src.environment.config import FactoryConfig
-from src.environment.grid import GridManager
+from src.environment.FactoryConfig import FactoryConfig
+from src.environment.GridManager import GridManager
 from src.environment.Stats import StatsCollector
 from src.environment.Testing import TestingManager
 

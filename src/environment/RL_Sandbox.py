@@ -1,5 +1,5 @@
 from FactoryModel import factory_model
-from config import FactoryConfig
+from src.environment.FactoryConfig import FactoryConfig
 
 config = FactoryConfig.get_default_rl_config() #Gets the default starting rl configuration to run
 model = factory_model(width=25, height=25, N=60, config=config) #how big the grid is with N agents with a given policy configs.
