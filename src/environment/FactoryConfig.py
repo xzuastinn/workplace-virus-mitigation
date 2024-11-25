@@ -43,19 +43,19 @@ class FactoryConfig:
             visualization=True
         )
     
-    @staticmethod
-    def get_default_rl_config():
-        """Returns base configuration for RL training"""
-        return FactoryConfig(
-            cleaning_type='light',
-            splitting_level=0,
-            testing_level='none',
-            social_distancing=False,
-            mask_mandate=False,
-            shifts_per_day=4,
-            steps_per_day=24,
-            visualization=False
-        )
+    # @staticmethod
+    # def get_default_rl_config():
+    #     """Returns base configuration for RL training"""
+    #     return FactoryConfig(
+    #         cleaning_type='light',
+    #         splitting_level=0,
+    #         testing_level='none',
+    #         social_distancing=False,
+    #         mask_mandate=False,
+    #         shifts_per_day=4,
+    #         steps_per_day=24,
+    #         visualization=False
+    #     )
     
     def update_from_action(self, action_dict):
         """

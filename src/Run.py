@@ -49,7 +49,7 @@ daily_infections_chart = ChartModule([ #creates STEP infections chart not daily
     {"Label": "Daily Infections", "Color": "Red"}
 ], data_collector_name='datacollector')
 
-# viz_config = FactoryConfig.get_default_viz_config()
+
 
 # Create a server for the model
 server = ModularServer(
