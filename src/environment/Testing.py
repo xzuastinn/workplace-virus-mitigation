@@ -2,8 +2,8 @@ import random
 class TestingManager:
     def __init__(self, model):
         self.model = model
-        self.false_positive_rate = 0.02
-        self.false_negative_rate = 0.15
+        self.false_positive_rate = 0.05
+        self.false_negative_rate = 0.14
         self.tests_performed = 0
         self.last_test_step = -1
         

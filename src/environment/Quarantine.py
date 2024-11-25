@@ -22,7 +22,7 @@ class QuarantineManager:
         if agent not in self.quarantine_zone:
             if agent.pos is not None:
                 agent.last_section = self.model.grid_manager.get_section_index(agent.pos[0]) #track the section they were in to be readded to
-            self.model.grid.remove_agent(agent) #Pop them offthe grid
+            self.model.grid.remove_agent(agent) #Pop them off the grid
             self.quarantine_zone.append(agent) #Add them to quarentine
             agent.is_quarantined = True
             

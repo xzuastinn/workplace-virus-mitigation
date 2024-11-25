@@ -89,6 +89,7 @@ class factory_model(Model):
             "Healthy": lambda m: m.stats.count_health_status("healthy"),
             "Infected": lambda m: m.stats.count_health_status("infected"),
             "Recovered": lambda m: m.stats.count_health_status("recovered"),
+            "Death": lambda m: m.stats.count_health_status("death"),
             "Productivity": lambda m: (m.stats.calculate_productivity() * 
                                      m.testing.get_productivity_modifier() * 
                                      m.grid_manager.get_cleaning_productivity_modifier()),

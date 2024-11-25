@@ -17,6 +17,9 @@ def agent_portrayal(agent):
     elif agent.health_status == "recovered":
         portrayal["Color"] = "blue"
         portrayal["Layer"] = 3
+    elif agent.health_status == "death":
+        portrayal["Color"] = "black"
+        portrayal["Layer"] = 4
 
     return portrayal
 
@@ -32,7 +35,8 @@ chart = ChartModule(
     [
         {"Label": "Healthy", "Color": "Green"},
         {"Label": "Infected", "Color": "Red"},
-        {"Label": "Recovered", "Color": "Blue"}
+        {"Label": "Recovered", "Color": "Blue"},
+        {"Label": "Death", "Color": "Black"}
     ]
 )
 

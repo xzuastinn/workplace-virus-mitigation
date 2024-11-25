@@ -19,6 +19,7 @@ class worker_agent(Agent):
         self.confined_steps = 0
         self.base_position = None
         self.steps_since_base_change = 0
+        self.is_dead = False
 
     def get_section_bounds(self):
         """Get the boundaries of the agent's assigned section"""
@@ -112,7 +113,7 @@ class worker_agent(Agent):
 
     def move(self):
         """Move the agent to a random valid position on the grid."""
-        if self.is_quarantined: #dont need to move quarantined agents
+        if self.is_quarantined or self.is_dead: #dont need to move quarantined or dead agents
             return
 
         if self.base_position is None:
@@ -211,6 +212,10 @@ class worker_agent(Agent):
             if self.infection_time > 80: #80 steps to go back to healthy.
                 self.health_status = "healthy"
                 self.infection_time = 0
+        elif self.health_status == "death":
+            death_rate = 0.000613
+            if random.random() < death_rate:
+                self.is_dead = True
 
     def update_production(self):
         """Update agent's current production based on various factors."""
@@ -222,7 +227,11 @@ class worker_agent(Agent):
             production *= 0.2 #20% production for sick agents.
         elif self.health_status == "recovered":
             production *= 0.90 #90% production for recovered
-
+        elif self.health_status == "death":
+            production *= 0
+            self.current_production = 0
+            return
+        
         shift_penalty = {
             1: 0.6,   # One shift - 40% penalty
             2: 0.8,   # Two shifts - 20% reduction
@@ -255,7 +264,7 @@ class worker_agent(Agent):
 
     def infection(self):
         """Spread infection based on proximity with radius-based probability."""
-        if self.health_status == "infected":
+        if self.health_status == "infected" and self.is_dead == False:
             x, y = self.pos
             section_index = self.model.grid_manager.get_section_index(self.pos[0])
             self.model.grid_manager.update_infection_level(section_index, 1 if self.health_status == "infected" else 0)
@@ -289,6 +298,10 @@ class worker_agent(Agent):
 
     def step(self):
         """Define agent's behavior per step."""
+        if self.is_dead:
+            self.model.grid.remove_agent(self)
+            return
+
         if not self.is_quarantined:
             self.move() #moves agent
             self.infection() #spreads disease

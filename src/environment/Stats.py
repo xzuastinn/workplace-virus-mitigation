@@ -34,6 +34,7 @@ class StatsCollector:
             'healthy': self.count_health_status("healthy"),
             'infected': self.count_health_status("infected"),
             'recovered': self.count_health_status("recovered"),
+            'death': self.count_health_status("death"),
             'productivity': self.calculate_productivity()
         })
         
@@ -43,6 +44,7 @@ class StatsCollector:
             self.count_health_status("healthy"),
             self.count_health_status("infected"),
             self.count_health_status("recovered"),
+            self.count_health_status("death"),
         ]
         
     def is_done(self):
