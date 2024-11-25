@@ -128,7 +128,7 @@ class worker_agent(Agent):
         if self.model.social_distancing: #handles social_distancing based on shift changes so that agents start atleast 1 block away
             valid_positions = []
             check_positions = self.get_valid_positions()
-            MINIMUM_DISTANCE = 1
+            MINIMUM_DISTANCE = 2
             
             for pos in check_positions: #Calculates new valid poisitons based on whether or not social distancing is being adhered to
                 is_valid = True
@@ -192,7 +192,8 @@ class worker_agent(Agent):
             base_prob *= 0.15
 
         section_prob = self.model.grid_manager.get_infection_probability(section_index)
-            
+        if had_covid:
+            base_prob *= .5 
         if self.model.mask_mandate:
             base_prob *= 0.7  # Masks reduce transmission by 30%
         if self.model.social_distancing:
