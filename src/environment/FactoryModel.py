@@ -14,7 +14,7 @@ from src.environment.Quarantine import QuarantineManager
 from src.environment.FactoryConfig import FactoryConfig
 from src.environment.GridManager import GridManager
 from src.environment.Stats import StatsCollector
-from src.environment.Testing import TestingManager
+from src.environment.SwabTesting import TestingManager
 
 class factory_model(Model):
     """Main class model that sets up the environment with provided parameters and agents"""
