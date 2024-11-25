@@ -45,12 +45,16 @@ prod_chart = ChartModule([
 ], data_collector_name='datacollector')
 
 
+daily_infections_chart = ChartModule([ #creates STEP infections chart not daily
+    {"Label": "Daily Infections", "Color": "Red"}
+], data_collector_name='datacollector')
 
+# viz_config = FactoryConfig.get_default_viz_config()
 
 # Create a server for the model
 server = ModularServer(
     factory_model,
-    [grid, chart, prod_chart],
+    [grid, chart, prod_chart, daily_infections_chart],
     "Factory Infection Model",
     {"width": GRID_WIDTH, 
      "height": GRID_HEIGHT, 
@@ -59,5 +63,6 @@ server = ModularServer(
      }
 )
 
+server.port = 8511
 # Launch the server to visualize the environment
 server.launch()
