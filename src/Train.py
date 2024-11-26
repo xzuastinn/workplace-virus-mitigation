@@ -8,18 +8,19 @@ from src.model.dqn_agent import DQNAgent
 # Define agent portrayal for visualization
 def agent_portrayal(agent):
     portrayal = {"Shape": "circle", "Filled": "true", "r": 0.5}
-    if agent.health_status == "healthy":
-        portrayal["Color"] = "green"
-        portrayal["Layer"] = 1
-    elif agent.health_status == "infected":
-        portrayal["Color"] = "red"
-        portrayal["Layer"] = 2
-    elif agent.health_status == "recovered":
-        portrayal["Color"] = "blue"
-        portrayal["Layer"] = 3
-    elif agent.health_status == "death":
-        portrayal["Color"] = "black"
-        portrayal["Layer"] = 4
+    if hasattr(agent, "health_status"):
+        if agent.health_status == "healthy":
+            portrayal["Color"] = "green"
+            portrayal["Layer"] = 1
+        elif agent.health_status == "infected":
+            portrayal["Color"] = "red"
+            portrayal["Layer"] = 2
+        elif agent.health_status == "recovered":
+            portrayal["Color"] = "blue"
+            portrayal["Layer"] = 3
+        elif agent.health_status == "death":
+            portrayal["Color"] = "black"
+            portrayal["Layer"] = 4
     return portrayal
 
 # Visualization components
@@ -75,6 +76,20 @@ state_dim = 8  # Adjust based on your `get_state` implementation
 action_dim = len(actions)
 agent = DQNAgent(state_dim, action_dim)
 
+# Function to render the grid manually
+def render_grid(grid, model):
+    portrayal_data = []
+    for cell_content in model.grid.coord_iter():
+        if len(cell_content) == 3:  # Ensure proper tuple unpacking
+            content, x, y = cell_content
+            for obj in content:
+                if hasattr(obj, "health_status"):  # Check for valid agent attributes
+                    portrayal = grid.portrayal_method(obj)
+                    portrayal_data.append(portrayal)
+                else:
+                    print(f"Unexpected content type: {type(obj)}")
+    return portrayal_data
+
 num_episodes = 1000
 max_steps_per_episode = 100
 
@@ -97,8 +112,8 @@ for episode in range(num_episodes):
         model.datacollector.collect(model)
 
         # Extract reward and state
-        new_infections = step_results[2]['new_infections']
-        productivity = step_results[2]['productivity']
+        new_infections = step_results.get('new_infections', 0)  # Default to 0 if key is missing
+        productivity = step_results.get('productivity', 0)      # Default to 0 if key is missing
         reward = productivity - 2 * new_infections
         total_reward += reward
 
@@ -110,10 +125,8 @@ for episode in range(num_episodes):
         state = next_state
 
         # Update visualization
-        grid.update(model.schedule)
-        chart.update(model)
-        prod_chart.update(model)
-        daily_infections_chart.update(model)
+        grid_state = render_grid(grid, model)
+        print(f"Grid State: {grid_state}")  # Debugging the rendered grid state
 
         # Add a small pause for visualization purposes
         time.sleep(0.1)

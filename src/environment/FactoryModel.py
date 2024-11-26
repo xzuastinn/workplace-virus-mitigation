@@ -119,31 +119,31 @@ class factory_model(Model):
         return self.current_step_in_day == self.next_shift_change
 
     def step(self, action=None):
-        """Proccesses a single step in the model"""
+        """Processes a single step in the model."""
         self.current_step += 1
         self.current_step_in_day = self.current_step % self.steps_per_day 
-        
+
         if self.current_step_in_day == 0:
             self.current_day += 1
-            
-        self.process_scheduled_events() #Runs all the scheduled events for the current step
 
-        pre_step_infected = self.stats.count_health_status("infected") #helper for getting new infections
-        self._process_agent_steps() #processes all of the agents actions during this step
+        self.process_scheduled_events()  # Runs all scheduled events for the current step
+
+        pre_step_infected = self.stats.count_health_status("infected")
+        self._process_agent_steps()  # Processes all agents' actions during this step
         post_step_infected = self.stats.count_health_status("infected")
-        
-        new_infections = max(0, post_step_infected - pre_step_infected)
-        self.stats.update_infections(new_infections) #updates the infection count and sends it to stats.
-        
-        if self.current_step_in_day == self.steps_per_day - 1:
-            self.stats.process_day_end() #Gets daily stats
-            
-        self.datacollector.collect(self)
-        
-        self.testing.current_productivity_impact = 0 #Resets the testing impact on productivity
 
-        if not self.visualization:
-            return self._get_step_results(new_infections, post_step_infected)
+        new_infections = max(0, post_step_infected - pre_step_infected)
+        self.stats.update_infections(new_infections)  # Updates the infection count
+
+        if self.current_step_in_day == self.steps_per_day - 1:
+            self.stats.process_day_end()  # Gets daily stats
+
+        self.datacollector.collect(self)
+        self.testing.current_productivity_impact = 0  # Resets the testing impact on productivity
+
+        # Return results for training and visualization
+        return self._get_step_results(new_infections, post_step_infected)
+
         
     def _process_agent_steps(self):
         """Method to call each agent to get them to move in the environment for a step"""
@@ -185,31 +185,30 @@ class factory_model(Model):
     
 
     def _get_step_results(self, new_infections, total_infected):
-        """Calculates the new step results after each step"""
-        base_productivity = self.stats.calculate_productivity() #Gets the current productivity value
-        cleaning_modifier = self.grid_manager.get_cleaning_productivity_modifier() #Gets the cleaning modifier if any.
-        testing_modifier = self.testing.get_productivity_modifier() #gets the testing productivity modifier if any
-        
-        final_productivity = (base_productivity * #Gets the final total productivity for the current step
-                            cleaning_modifier * 
-                            testing_modifier)
-        
-        return ( #Returns step data
-            self.stats.get_state(),
-            self.stats.is_done(),
-            {
-                'day': self.stats.current_day,
-                'step_in_day': self.current_step_in_day,
-                'new_infections': new_infections,
-                'total_infected': total_infected,
-                'productivity': final_productivity,
-                'quarantined': len(self.quarantine.quarantine_zone),
-                'base_production': base_productivity,
-                'infection_penalty': -2.0 * (new_infections / self.num_agents),
-                'cleaning_modifier': cleaning_modifier,
-                'testing_modifier': testing_modifier
-            }
+        """Calculates the new step results after each step."""
+        base_productivity = self.stats.calculate_productivity()
+        cleaning_modifier = self.grid_manager.get_cleaning_productivity_modifier()
+        testing_modifier = self.testing.get_productivity_modifier()
+
+        final_productivity = (
+            base_productivity * 
+            cleaning_modifier * 
+            testing_modifier
         )
+
+        return {
+            'day': self.current_day,
+            'step_in_day': self.current_step_in_day,
+            'new_infections': new_infections,
+            'total_infected': total_infected,
+            'productivity': final_productivity,
+            'quarantined': len(self.quarantine.quarantine_zone),
+            'base_production': base_productivity,
+            'infection_penalty': -2.0 * (new_infections / self.num_agents),
+            'cleaning_modifier': cleaning_modifier,
+            'testing_modifier': testing_modifier
+        }
+
     
     def update_config(self, action_dict):
         """Method to update the current factor health configuration. Allows for the 6 variables to be changed during a simulation"""
