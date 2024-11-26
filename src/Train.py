@@ -4,6 +4,99 @@ import time
 from mesa.visualization.modules import CanvasGrid, ChartModule
 from environment.FactoryModel import factory_model
 from src.model.dqn_agent import DQNAgent
+from mesa.visualization.modules import CanvasGrid, ChartModule
+from mesa.visualization.ModularVisualization import ModularServer
+from environment.FactoryModel import factory_model
+from environment.FactoryConfig import FactoryConfig
+
+def agent_portrayal(agent):
+    """Defines how agents appear in the visualization."""
+    portrayal = {"Shape": "circle", "Filled": "true", "r": 0.5}
+
+    if hasattr(agent, "health_status"):
+        if agent.health_status == "healthy":
+            portrayal["Color"] = "green"
+            portrayal["Layer"] = 1
+        elif agent.health_status == "infected":
+            portrayal["Color"] = "red"
+            portrayal["Layer"] = 2
+        elif agent.health_status == "recovered":
+            portrayal["Color"] = "blue"
+            portrayal["Layer"] = 3
+        elif agent.health_status == "death":
+            portrayal["Color"] = "black"
+            portrayal["Layer"] = 4
+
+    return portrayal
+
+# Visualization components
+GRID_WIDTH = 50
+GRID_HEIGHT = 25
+CANVAS_WIDTH = 500
+CANVAS_HEIGHT = 250
+grid = CanvasGrid(agent_portrayal, GRID_WIDTH, GRID_HEIGHT, CANVAS_WIDTH, CANVAS_HEIGHT)
+
+chart = ChartModule(
+    [
+        {"Label": "Healthy", "Color": "Green"},
+        {"Label": "Infected", "Color": "Red"},
+        {"Label": "Recovered", "Color": "Blue"},
+        {"Label": "Death", "Color": "Black"}
+    ]
+)
+
+prod_chart = ChartModule([
+    {"Label": "Productivity", "Color": "Purple"},
+], data_collector_name='datacollector')
+
+daily_infections_chart = ChartModule([
+    {"Label": "Daily Infections", "Color": "Red"}
+], data_collector_name='datacollector')
+
+# Create the server for visualization
+viz_config = FactoryConfig(
+    width=GRID_WIDTH,
+    height=GRID_HEIGHT,
+    num_agents=40,
+    splitting_level=0,
+    cleaning_type='medium',
+    testing_level='light',
+    social_distancing=True,
+    mask_mandate=False,
+    shifts_per_day=4,
+    steps_per_day=24,
+    visualization=True
+)
+
+# Define the training loop with optional visualization
+def train_with_visualization(num_episodes=1000, visualize_every=50):
+    for episode in range(num_episodes):
+        is_visualizing = (episode % visualize_every == 0)
+        model = factory_model(
+            width=GRID_WIDTH,
+            height=GRID_HEIGHT,
+            N=100,
+            config=viz_config if is_visualizing else None,
+            visualization=is_visualizing
+        )
+        if is_visualizing:
+            print(f"Starting visualization for episode {episode + 1}")
+
+            # Launch the server for the current episode
+            server = ModularServer(
+                factory_model,
+                [grid, chart, prod_chart, daily_infections_chart],
+                "Factory Infection Model",
+                {"N": 100, "config": viz_config, "width": GRID_WIDTH, "height": GRID_HEIGHT},
+            )
+            server.port = 8511
+            server.launch()
+        
+        # Continue training process here (omit for brevity)
+        # Train agent, collect rewards, update state...
+
+train_with_visualization()
+
 
 # Define agent portrayal for visualization
 def agent_portrayal(agent):
@@ -90,8 +183,8 @@ def render_grid(grid, model):
                     print(f"Unexpected content type: {type(obj)}")
     return portrayal_data
 
-num_episodes = 1000
-max_steps_per_episode = 100
+num_episodes = 50
+max_steps_per_episode = 2160
 
 # Training loop with visualization
 for episode in range(num_episodes):
