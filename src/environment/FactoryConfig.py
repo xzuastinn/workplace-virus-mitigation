@@ -2,7 +2,7 @@ class FactoryConfig:
     """Class that handles the configuration for the simulation. Has base
       visualization and base rl visualizations that can be changed"""
     def __init__(self, 
-                 cleaning_type='heavy',
+                 cleaning_type='light',
                  splitting_level=1,
                  testing_level='light',
                  social_distancing=False,
