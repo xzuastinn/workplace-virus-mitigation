@@ -1,6 +1,7 @@
 from mesa.visualization.modules import CanvasGrid, ChartModule
 from mesa.visualization.ModularVisualization import ModularServer
 from environment.FactoryModel import factory_model
+from environment.FactoryConfig import FactoryConfig
 
 
 
@@ -49,18 +50,30 @@ daily_infections_chart = ChartModule([ #creates STEP infections chart not daily
     {"Label": "Daily Infections", "Color": "Red"}
 ], data_collector_name='datacollector')
 
-
-
+viz_config = FactoryConfig(
+    width=GRID_WIDTH, 
+    height=GRID_HEIGHT, 
+    num_agents=40,
+    splitting_level= 0,
+    cleaning_type='medium',
+    testing_level='light',
+    social_distancing=True,
+    mask_mandate=False,
+    shifts_per_day=4,
+    steps_per_day=24,
+    visualization=True
+)
 # Create a server for the model
 server = ModularServer(
     factory_model,
     [grid, chart, prod_chart, daily_infections_chart],
     "Factory Infection Model",
-    {"width": GRID_WIDTH, 
-     "height": GRID_HEIGHT, 
-     "N": 100, 
-     "visualization": True,
-     }
+    {"N": 100,
+     "config": viz_config,
+     "width": GRID_WIDTH,
+     "height": GRID_HEIGHT
+     },
+     
 )
 
 server.port = 8511
