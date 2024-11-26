@@ -61,6 +61,19 @@ class factory_model(Model):
             
         self.initialize_agents()
         self.initialize_datacollector()
+
+    def get_state(self):
+        """Extracts the current state of the environment for the RL agent."""
+        return [
+            self.stats.count_health_status("healthy"),
+            self.stats.count_health_status("infected"),
+            self.stats.count_health_status("recovered"),
+            self.stats.count_health_status("death"),
+            self.stats.calculate_productivity(),
+            self.current_step_in_day,
+            int(self.social_distancing),
+            int(self.mask_mandate),
+        ]
         
     def initialize_agents(self):
         """Places agents in the grid and assigning them to sections. Starts the infection with a single 

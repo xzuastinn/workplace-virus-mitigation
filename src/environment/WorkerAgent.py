@@ -250,6 +250,7 @@ class worker_agent(Agent):
 
         if self.model.mask_mandate:
             production *= 0.95 #mask mandate reduces production by 5%
+            print("Mask mandate begins")
         if self.model.social_distancing:
             production *= 0.90  #social distancing reduces production by 10%
 
