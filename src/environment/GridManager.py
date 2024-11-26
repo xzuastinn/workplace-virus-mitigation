@@ -107,6 +107,8 @@ class GridManager:
         occupied_positions = []
 
         for agent in active_agents:
+            if agent.pos is None:
+                continue
             # moves agents within their own section index to a new position. 
             current_section_index = self.get_section_index(agent.pos[0])
             

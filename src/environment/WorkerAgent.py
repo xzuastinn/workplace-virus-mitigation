@@ -206,6 +206,12 @@ class worker_agent(Agent):
         if self.health_status == "infected":
             self.infection_time += 1
             self.had_covid = True
+
+            death_rate = 0.000613
+            if random.random() < death_rate:
+                self.is_dead = True
+                self.health_status = "death"
+
             if self.infection_time > 40: #40 steps of illness to recover
                 self.health_status = "recovered"
         elif self.health_status == "recovered":
@@ -213,10 +219,7 @@ class worker_agent(Agent):
             if self.infection_time > 80: #80 steps to go back to healthy.
                 self.health_status = "healthy"
                 self.infection_time = 0
-        elif self.health_status == "death":
-            death_rate = 0.000613
-            if random.random() < death_rate:
-                self.is_dead = True
+
 
     def update_production(self):
         """Update agent's current production based on various factors."""
@@ -297,15 +300,27 @@ class worker_agent(Agent):
                                         agent.health_status = "infected"
                                         agent.had_covid = True
                                         self.model.grid_manager.update_infection_level(target_section, 1)
+    def introduce_infection(self):
+        infected_agent = [agent for agent in self.model.schedule.agents if agent.health_status == "infected"]
+
+        if not infected_agent:
+            healthy_agent = [agent for agent in self.model.schedule.agents if agent.health_status == "healthy"]
+            if healthy_agent:
+                random.choice(healthy_agent).health_status = "infected"
+                print("New infection")
 
     def step(self):
         """Define agent's behavior per step."""
         if self.is_dead:
-            self.model.grid.remove_agent(self)
-            return
+            if self.pos is not None:
+                self.model.grid.remove_agent(self)
+                return
 
         if not self.is_quarantined:
             self.move() #moves agent
             self.infection() #spreads disease
         self.update_infection() #progresses disease
         self.update_production() #updates agent production output.
+
+        if self.model.schedule.steps % 50 == 0:
+            self.introduce_infection()
