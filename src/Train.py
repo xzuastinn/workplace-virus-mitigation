@@ -97,25 +97,6 @@ def train_with_visualization(num_episodes=1000, visualize_every=50):
 
 train_with_visualization()
 
-
-# Define agent portrayal for visualization
-def agent_portrayal(agent):
-    portrayal = {"Shape": "circle", "Filled": "true", "r": 0.5}
-    if hasattr(agent, "health_status"):
-        if agent.health_status == "healthy":
-            portrayal["Color"] = "green"
-            portrayal["Layer"] = 1
-        elif agent.health_status == "infected":
-            portrayal["Color"] = "red"
-            portrayal["Layer"] = 2
-        elif agent.health_status == "recovered":
-            portrayal["Color"] = "blue"
-            portrayal["Layer"] = 3
-        elif agent.health_status == "death":
-            portrayal["Color"] = "black"
-            portrayal["Layer"] = 4
-    return portrayal
-
 # Visualization components
 GRID_WIDTH = 50
 GRID_HEIGHT = 25
@@ -206,9 +187,13 @@ for episode in range(num_episodes):
 
         # Extract reward and state
         infected = step_results.get('infected', 0)  # Default to 0 if key is missing
-        productivity = step_results.get('productivity', 0)      # Default to 0 if key is missing
+        productivity = step_results.get('productivity', 0)     # Default to 0 if key is missing
+        death = step_results.get('death', 0)
+        
         # Base reward formula
-        reward = -1 * infected  # Focus on penalizing infections
+        reward = -2 * infected  # Focus on penalizing infections
+
+        reward = -100000 * death
 
         # Incentivize higher productivity
         if productivity >= 0.6:
