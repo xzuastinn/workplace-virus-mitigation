@@ -11,7 +11,7 @@ class GridManager:
                 'frequency': 8, 
                 'infection_reduction': 0.35, 
                 'duration': 1,
-                'production_reduction': 0.05  # 5% production reduction
+                'production_reduction': 0.00
             },
             'medium': {
                 'frequency': 16, 

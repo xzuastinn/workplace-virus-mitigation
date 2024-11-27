@@ -10,20 +10,20 @@ class TestingManager:
         self.testing_levels = { #Parameter dictionary for testing level. PRoportion is how many agents to test out of total pop
             'light': {
                 'enabled': False,
-                'proportion': 0.2,
-                'productivity_impact': 0.15, #How much of an impact this testing schedule has on productivity
+                'proportion': 0,
+                'productivity_impact': 0, #How much of an impact this testing schedule has on productivity
                 'frequency': 8 #How frequent the test schedule is ran
             },
             'medium': {
                 'enabled': False,
                 'proportion': 0.5,
-                'productivity_impact': 0.25,
+                'productivity_impact': 0.10,
                 'frequency': 16
             },
             'heavy': {
                 'enabled': False,
-                'proportion': 0.8,
-                'productivity_impact': 0.40,
+                'proportion': 0.1,
+                'productivity_impact': 0.20,
                 'frequency': 24
             }
         }

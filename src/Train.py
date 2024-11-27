@@ -205,10 +205,10 @@ for episode in range(num_episodes):
         model.datacollector.collect(model)
 
         # Extract reward and state
-        new_infections = step_results.get('new_infections', 0)  # Default to 0 if key is missing
+        infected = step_results.get('infected', 0)  # Default to 0 if key is missing
         productivity = step_results.get('productivity', 0)      # Default to 0 if key is missing
         # Base reward formula
-        reward = -2 * new_infections  # Focus on penalizing infections
+        reward = -1 * infected  # Focus on penalizing infections
 
         # Incentivize higher productivity
         if productivity >= 0.6:
@@ -216,7 +216,7 @@ for episode in range(num_episodes):
 
         # Harsh penalty for productivity below 60%
         if productivity < 0.6:
-            reward -= 1000 * (0.6 - productivity)  # Significantly harsher penalty
+            reward -= 100000 * (0.6 - productivity)  # Significantly harsher penalty
 
         # Train the agent
         next_state = np.array(model.get_state())
