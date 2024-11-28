@@ -1,6 +1,5 @@
 import itertools
 import numpy as np
-import time
 from mesa.visualization.modules import CanvasGrid, ChartModule
 from environment.FactoryModel import factory_model
 from src.model.dqn_agent import DQNAgent

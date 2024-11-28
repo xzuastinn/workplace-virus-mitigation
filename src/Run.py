@@ -57,7 +57,7 @@ def agent_portrayal(agent):
 
 GRID_WIDTH = 50
 GRID_HEIGHT = 25
-CANVAS_WIDTH = 500
+CANVAS_WIDTH = 862
 CANVAS_HEIGHT = 250
 
 # Set up the grid size and visualization
