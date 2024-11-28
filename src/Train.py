@@ -41,7 +41,7 @@ grid = CanvasGrid(agent_portrayal, GRID_WIDTH, GRID_HEIGHT, CANVAS_WIDTH, CANVAS
 viz_config = FactoryConfig(
     width=GRID_WIDTH,
     height=GRID_HEIGHT,
-    num_agents=100,
+    num_agents=200,
     splitting_level=0,
     cleaning_type='light',
     testing_level='light',
@@ -109,7 +109,7 @@ def train_with_toggle(num_episodes, visualize_every=50, enable_visualization=Tru
         model = factory_model(
             width=GRID_WIDTH,
             height=GRID_HEIGHT,
-            N=100,
+            N=200,
             config=viz_config if is_visualizing else None,
             visualization=is_visualizing
         )
