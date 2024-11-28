@@ -86,9 +86,9 @@ viz_config = FactoryConfig(
     height=GRID_HEIGHT, 
     num_agents=100,
     splitting_level=0,
-    cleaning_type='medium',
+    cleaning_type='light',
     testing_level='light',
-    social_distancing=False,
+    social_distancing=True,
     mask_mandate=2,
     shifts_per_day=4,
     steps_per_day=24,
@@ -116,6 +116,7 @@ def factory_model_with_dqn(N, config, width, height):
         # Select action using the trained model
         action_index = agent.select_action(state, train=False)  # Use train=False to disable exploration
         action = actions[action_index]
+        print(action)
 
         # Apply action and advance the simulation
         model.update_config(action)
