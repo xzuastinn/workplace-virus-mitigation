@@ -208,12 +208,13 @@ class worker_agent(Agent):
             self.infection_time += 1
             self.had_covid = True
 
-            death_rate = 0.000613
-            if random.random() < death_rate:
-                self.is_dead = True
-                self.health_status = "death"
+            if self.infection_time == 1:
+                death_rate = 0.000613
+                if random.random() < death_rate:
+                    self.is_dead = True
+                    self.health_status = "death"
 
-            if self.infection_time > 40: #40 steps of illness to recover
+            if self.infection_time > 48: #40 steps of illness to recover
                 self.health_status = "recovered"
         elif self.health_status == "recovered":
             self.infection_time += 1
@@ -255,7 +256,7 @@ class worker_agent(Agent):
 
         if self.model.mask_mandate:
             production *= 0.95 #mask mandate reduces production by 5%
-            print("Mask mandate begins")
+   
         if self.model.social_distancing:
             production *= 0.90  #social distancing reduces production by 10%
 
