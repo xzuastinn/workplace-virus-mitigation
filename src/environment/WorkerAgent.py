@@ -195,10 +195,16 @@ class worker_agent(Agent):
         section_prob = self.model.grid_manager.get_infection_probability(section_index)
         if had_covid:
             base_prob *= .5 
-        if self.model.mask_mandate:
-            base_prob *= 0.7  # Masks reduce transmission by 30%
         if self.model.social_distancing:
             base_prob *= 0.8  # Social distancing reduces transmission by 20%
+        
+        mask_mandate_impacts = {
+            0: 1.0,   # No masks
+            1: 0.85,  # Partial mask mandate
+            2: 0.7,   # Moderate mask mandate
+            3: 0.5    # Strict mask mandate
+        }
+        base_prob *= mask_mandate_impacts.get(self.model.mask_mandate, 1.0)
             
         return base_prob * section_prob
     
@@ -254,8 +260,13 @@ class worker_agent(Agent):
         }
         production *= splitting_level_penalties.get(self.model.splitting_level, 1.0)
 
-        if self.model.mask_mandate:
-            production *= 0.95 #mask mandate reduces production by 5%
+        mask_mandate_productivity_impacts = {
+            0: 1.0,   # No masks
+            1: 0.95,  # Partial mask mandate
+            2: 0.90,  # Moderate mask mandate
+            3: 0.85   # Strict mask mandate
+        }
+        production *= mask_mandate_productivity_impacts.get(self.model.mask_mandate, 1.0)
    
         if self.model.social_distancing:
             production *= 0.90  #social distancing reduces production by 10%
@@ -312,7 +323,6 @@ class worker_agent(Agent):
             healthy_agent = [agent for agent in self.model.schedule.agents if agent.health_status == "healthy"]
             if healthy_agent:
                 random.choice(healthy_agent).health_status = "infected"
-                print("New infection")
 
     def step(self):
         """Define agent's behavior per step."""
@@ -325,7 +335,7 @@ class worker_agent(Agent):
             self.move() #moves agent
             self.infection() #spreads disease
         self.update_infection() #progresses disease
-        self.update_production() #updates agent production output.
+        self.update_production() #updates agent production output
 
         if self.model.schedule.steps % 50 == 0:
             self.introduce_infection()

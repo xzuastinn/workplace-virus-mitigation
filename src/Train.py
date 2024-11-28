@@ -62,7 +62,7 @@ viz_config = FactoryConfig(
     cleaning_type='light',
     testing_level='light',
     social_distancing=False,
-    mask_mandate=False,
+    mask_mandate=0,
     shifts_per_day=4,
     steps_per_day=24,
     visualization=True
@@ -119,7 +119,7 @@ cleaning_options = [0, 1, 2]  # light, medium, heavy
 splitting_options = [0, 1, 2, 3]  # none, half, quarter, eighth
 testing_options = [0, 1, 2, 3]  # none, light, medium, heavy
 social_distancing_options = [False, True]
-mask_mandate_options = [False, True]
+mask_mandate_options = [0, 1, 2, 3]
 shifts_options = [0, 1, 2, 3]  # maps to 1, 2, 3, or 4 shifts per day
 
 # Generate all combinations

@@ -76,7 +76,7 @@ class factory_model(Model):
             self.stats.calculate_productivity(),
             self.current_step_in_day,
             int(self.social_distancing),
-            int(self.mask_mandate),
+            self.mask_mandate,
         ]
     
     def initialize_agents(self):
@@ -141,8 +141,10 @@ class factory_model(Model):
     def step(self, action=None):
         """Processes a single step in the model."""
         self.current_step += 1
-        self.current_step_in_day = self.current_step % self.steps_per_day 
-
+        self.current_step_in_day = self.current_step % self.steps_per_day
+        if self.current_step % 10: 
+            print(f'Mask_mandate level {self.mask_mandate}')
+            print(f'Social Distancing {self.social_distancing}' )
         if self.current_step_in_day == 0:
             self.current_day += 1
 
@@ -154,7 +156,7 @@ class factory_model(Model):
 
         new_infections = max(0, post_step_infected - pre_step_infected)
         self.stats.update_infections(new_infections)  # Updates the infection count
-
+        
         if self.current_step_in_day == self.steps_per_day - 1:
             self.stats.process_day_end()  # Gets daily stats
 

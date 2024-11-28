@@ -12,7 +12,7 @@ cleaning_options = [0, 1, 2]  # light, medium, heavy
 splitting_options = [0, 1, 2, 3]  # none, half, quarter, eighth
 testing_options = [0, 1, 2, 3]  # none, light, medium, heavy
 social_distancing_options = [False, True]
-mask_mandate_options = [False, True]
+mask_mandate_options = [0, 1, 2, 3]
 shifts_options = [0, 1, 2, 3]  # maps to 1, 2, 3, or 4 shifts per day
 
 # Generate all combinations of actions
@@ -86,20 +86,20 @@ viz_config = FactoryConfig(
     height=GRID_HEIGHT, 
     num_agents=100,
     splitting_level=0,
-    cleaning_type='light',
+    cleaning_type='medium',
     testing_level='light',
     social_distancing=False,
-    mask_mandate=False,
+    mask_mandate=2,
     shifts_per_day=4,
     steps_per_day=24,
     visualization=True
 )
 
 # Load the trained DQN model
-state_dim = 8  # Ensure this matches your state dimension
+state_dim = 8
 action_dim = len(actions)  # Number of possible actions
 agent = DQNAgent(state_dim, action_dim)
-agent.load_model("dqn_factory_model.pth")  # Load the trained weights
+#agent.load_model("dqn_factory_model.pth")  # Load the trained weights
 
 # Create a server for the model
 def factory_model_with_dqn(N, config, width, height):
