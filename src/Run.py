@@ -84,7 +84,7 @@ daily_infections_chart = ChartModule([
 viz_config = FactoryConfig(
     width=GRID_WIDTH, 
     height=GRID_HEIGHT, 
-    num_agents=100,
+    num_agents=200,
     splitting_level=0,
     cleaning_type='light',
     testing_level='light',
@@ -99,7 +99,7 @@ viz_config = FactoryConfig(
 state_dim = 8
 action_dim = len(actions)  # Number of possible actions
 agent = DQNAgent(state_dim, action_dim)
-#agent.load_model("dqn_factory_model.pth")  # Load the trained weights
+agent.load_model("dqn_factory_model.pth")  # Load the trained weights
 
 # Create a server for the model
 def factory_model_with_dqn(N, config, width, height):
@@ -129,7 +129,7 @@ server = ModularServer(
     factory_model_with_dqn,
     [grid, chart, prod_chart, daily_infections_chart],
     "Factory Infection Model with DQN",
-    {"N": 100, "config": viz_config, "width": GRID_WIDTH, "height": GRID_HEIGHT}
+    {"N": 200, "config": viz_config, "width": GRID_WIDTH, "height": GRID_HEIGHT}
 )
 
 server.port = 8511
