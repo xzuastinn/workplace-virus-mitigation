@@ -103,15 +103,21 @@ class GridManager:
         """Function to manage how a shift change is ran."""
         self.model.current_shift = (self.model.current_shift + 1) % self.model.shifts_per_day
 
-        active_agents = [agent for agent in self.model.schedule.agents if not agent.is_quarantined] #all agents on the schedule not in quarantine.
-        occupied_positions = []
+        active_agents = [agent for agent in self.model.active_agents if not agent.is_quarantined]
+        inactive_agents = [agent for agent in self.model.inactive_agents 
+                           if not agent.is_quarantined]
 
-        for agent in active_agents:
-            if agent.pos is None:
-                continue
-            # moves agents within their own section index to a new position. 
-            current_section_index = self.get_section_index(agent.pos[0])
-            
+        for agent in active_agents[:]:
+            if agent.pos is not None:
+                self.model.grid.remove_agent(agent)
+            agent.on_shift = False
+            agent.pos = None
+            self.model.active_agents.remove(agent)
+            self.model.inactive_agents.append(agent)
+
+        occupied_positions = set()
+        for agent in inactive_agents[:]:
+            current_section_index = self.get_section_index(agent.unique_id)
             section_width = self.model.grid.width // (2 ** self._splitting_level if self._splitting_level > 0 else 1)
             section_start = current_section_index * section_width
             section_end = section_start + section_width
@@ -121,26 +127,28 @@ class GridManager:
             placed = False
 
             while attempts < max_attempts and not placed:
-                #tries to place the agent in a new random position on the board thats not occupied.
                 new_x = self.model.random.randrange(section_start, section_end)
                 new_y = self.model.random.randrange(self.model.grid.height)
                 new_pos = (new_x, new_y)
 
                 if new_pos not in occupied_positions:
-                    if new_pos != agent.pos:
-                        self.model.grid.move_agent(agent, new_pos)
-                        agent.set_base_position(new_pos)
-                        agent.steps_since_base_change = 0
-                        occupied_positions.append(new_pos)
-                        agent.section = f'section_{current_section_index}'
-                        agent.last_section = current_section_index
-                        placed = True
-                    break
+                    self.model.grid.place_agent(agent, new_pos)
+                    agent.set_base_position(new_pos)
+                    agent.steps_since_base_change = 0
+                    agent.on_shift = True
+                    occupied_positions.add(new_pos)
+                    agent.section = f'section_{current_section_index}'
+                    agent.last_section = current_section_index
+
+                    self.model.inactive_agents.remove(agent)
+                    self.model.active_agents.append(agent)
+
+                    placed = True
                 attempts += 1
 
-            if not placed: #if theres too many agents boot the current agent out of the simulation
-                self.model.grid.remove_agent(agent)
+            if not placed:
                 self.model.schedule.remove(agent)
+                self.model.inactive_agents.remove(agent)
 
         self.model.next_shift_change = ((self.model.current_step_in_day + self.model.steps_per_shift) % self.model.steps_per_day)
         

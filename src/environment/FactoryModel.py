@@ -29,6 +29,7 @@ class factory_model(Model):
             )
         # Base model parameters
         self.num_agents = config.num_agents
+        self.half_agents = self.num_agents // 2
         self.grid = MultiGrid(config.width, config.height, torus=True)
         self.schedule = RandomActivation(self)
         self.visualization = config.visualization
@@ -58,6 +59,9 @@ class factory_model(Model):
         self.current_step_in_day = 0
         self.current_day = 0
         self.current_shift = 0 
+
+        self.active_agents = []
+        self.inactive_agents = []
             
         self.initialize_agents()
         self.initialize_datacollector()
@@ -74,27 +78,43 @@ class factory_model(Model):
             int(self.social_distancing),
             int(self.mask_mandate),
         ]
-        
+    
     def initialize_agents(self):
-        """Places agents in the grid and assigning them to sections. Starts the infection with a single 
-        infected agent."""
-        first_infection = random.randrange(self.num_agents)
-        positions = self.grid_manager.get_random_positions(self.num_agents)
+        """Places agents in the grid and assigns them to sections. 
+        Half of agents start as inactive. Two agents in each group start infected."""
+        infected_active = 0
+        infected_inactive = 0
+        
+        positions = self.grid_manager.get_random_positions(self.half_agents)
         num_sections = 2 ** self.grid_manager.splitting_level if self.grid_manager.splitting_level > 0 else 1
 
         for i in range(self.num_agents):
-            section_index = positions[i][0] // (self.grid.width // num_sections)
+            section_index = i // (self.num_agents // num_sections)
             section = f'section_{section_index}'
             worker = worker_agent(i, self, section)
 
-            if i == first_infection:
+            # Infect 2 agents in active group
+            if i < self.half_agents and infected_active < 2:
                 worker.health_status = "infected"
+                infected_active += 1
 
-            self.schedule.add(worker)
-            pos = positions[i]
-            self.grid.place_agent(worker, pos)
-            worker.set_base_position(pos)
-            worker.last_section = section_index
+            # Infect 2 agents in inactive group
+            if i >= self.half_agents and infected_inactive < 2:
+                worker.health_status = "infected"
+                infected_inactive += 1
+
+            if i < self.half_agents:
+                self.schedule.add(worker)
+                pos = positions[i]
+                self.grid.place_agent(worker, pos)
+                worker.set_base_position(pos)
+                worker.last_section = section_index
+                worker.on_shift = True
+                self.active_agents.append(worker)
+            else:
+                worker.on_shift = False
+                self.inactive_agents.append(worker)
+                self.schedule.add(worker)
     
     def initialize_datacollector(self):
         """Collects different data to be used to track performance of the model."""
@@ -141,16 +161,18 @@ class factory_model(Model):
         self.datacollector.collect(self)
         self.testing.current_productivity_impact = 0  # Resets the testing impact on productivity
 
-        # Return results for training and visualization
         return self._get_step_results(new_infections, post_step_infected)
 
         
     def _process_agent_steps(self):
         """Method to call each agent to get them to move in the environment for a step"""
         for agent in self.schedule.agents:
-            if self.social_distancing and agent.pos is not None: #if social distancing is on call this function before step
-                self.grid_manager.move_agent_social_distance(agent)
-            agent.step() #step function in the agent class
+            # Only process active agents or agents not in quarantine
+            if (agent.on_shift or agent.is_quarantined) and agent.pos is not None:
+                if self.social_distancing and agent.pos is not None:
+                    self.grid_manager.move_agent_social_distance(agent)
+                agent.step()
+    
     
     def process_scheduled_events(self):
         """Process all scheduled events in the correct order"""
@@ -206,7 +228,9 @@ class factory_model(Model):
             'base_production': base_productivity,
             'infection_penalty': -2.0 * (new_infections / self.num_agents),
             'cleaning_modifier': cleaning_modifier,
-            'testing_modifier': testing_modifier
+            'testing_modifier': testing_modifier,
+            'active_agents': len(self.active_agents),
+            'inactive_agents': len(self.inactive_agents)
         }
 
     

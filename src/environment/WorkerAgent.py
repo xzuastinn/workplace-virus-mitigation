@@ -13,7 +13,8 @@ class worker_agent(Agent):
         self.recovery_time = 0 #tracks how long an agent is in recovery for
         self.had_covid = False
         self.is_quarantined = False
-        self.base_production = 1 #random base production value for each agent
+        self.base_production = 1 
+        self.on_shift = False
         self.current_production = self.base_production
         self.confined_to_2x2 = False
         self.confined_steps = 0
@@ -113,7 +114,7 @@ class worker_agent(Agent):
 
     def move(self):
         """Move the agent to a random valid position on the grid."""
-        if self.is_quarantined or self.is_dead: #dont need to move quarantined or dead agents
+        if self.is_quarantined or self.is_dead or self.on_shift == False: #dont need to move quarantined or dead agents
             return
 
         if self.base_position is None:
@@ -260,6 +261,9 @@ class worker_agent(Agent):
 
         if self.is_quarantined:
             production = 0 #agent in quarantine has 0 production
+
+        if self.on_shift == False:
+            production = 0
 
         self.current_production = production
 
