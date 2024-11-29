@@ -84,12 +84,12 @@ daily_infections_chart = ChartModule([
 viz_config = FactoryConfig(
     width=GRID_WIDTH, 
     height=GRID_HEIGHT, 
-    num_agents=200,
+    num_agents=100,
     splitting_level=0,
-    cleaning_type='light',
+    cleaning_type='medium',
     testing_level='light',
-    social_distancing=True,
-    mask_mandate=0,
+    social_distancing=False,
+    mask_mandate=2,
     shifts_per_day=4,
     steps_per_day=24,
     visualization=True
@@ -116,7 +116,6 @@ def factory_model_with_dqn(N, config, width, height):
         # Select action using the trained model
         action_index = agent.select_action(state, train=False)  # Use train=False to disable exploration
         action = actions[action_index]
-        print(action)
 
         # Apply action and advance the simulation
         model.update_config(action)
@@ -129,7 +128,7 @@ server = ModularServer(
     factory_model_with_dqn,
     [grid, chart, prod_chart, daily_infections_chart],
     "Factory Infection Model with DQN",
-    {"N": 200, "config": viz_config, "width": GRID_WIDTH, "height": GRID_HEIGHT}
+    {"N": 100, "config": viz_config, "width": GRID_WIDTH, "height": GRID_HEIGHT}
 )
 
 server.port = 8511

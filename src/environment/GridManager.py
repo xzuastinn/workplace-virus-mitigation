@@ -123,7 +123,7 @@ class GridManager:
             section_end = section_start + section_width
 
             attempts = 0
-            max_attempts = 50
+            max_attempts = 20
             placed = False
 
             while attempts < max_attempts and not placed:

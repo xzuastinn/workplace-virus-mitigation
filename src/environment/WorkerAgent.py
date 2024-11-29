@@ -231,9 +231,6 @@ class worker_agent(Agent):
 
     def update_production(self):
         """Update agent's current production based on various factors."""
-        if self in self.model.inactive_agents:
-            self.current_production = 0
-            return
         production = self.base_production
 
         if self.health_status == "healthy":
@@ -276,6 +273,9 @@ class worker_agent(Agent):
 
         if self.is_quarantined:
             production = 0 #agent in quarantine has 0 production
+
+        if self.on_shift == False:
+            production = 0
 
         self.current_production = production
 
@@ -336,10 +336,6 @@ class worker_agent(Agent):
             self.infection() #spreads disease
         self.update_infection() #progresses disease
         self.update_production() #updates agent production output
-        #print(self.model.mask_mandate)
-        #print(self.model.social_distancing)
-        #print(self.model.initial_cleaning)
-        #print(self.model.test_lvl)
 
         if self.model.schedule.steps % 50 == 0:
             self.introduce_infection()
