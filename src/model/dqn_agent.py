@@ -21,12 +21,12 @@ class DQNAgent:
         self.replay_buffer = deque(maxlen=10000)
         self.gamma = 0.99
         self.epsilon = 1.0
-        self.epsilon_decay = 0.9999
+        self.epsilon_decay = 0.999999
         self.epsilon_min = 0.01
         self.batch_size = 64
 
-    def select_action(self, state):
-        if random.random() < self.epsilon:
+    def select_action(self, state, train= True):
+        if train and random.random() < self.epsilon:
             return random.randint(0, self.action_dim - 1)
         else:
             state = torch.FloatTensor(state).unsqueeze(0)

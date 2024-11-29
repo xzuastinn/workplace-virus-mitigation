@@ -297,6 +297,14 @@ class worker_agent(Agent):
                                         agent.health_status = "infected"
                                         agent.had_covid = True
                                         self.model.grid_manager.update_infection_level(target_section, 1)
+    
+    def introduce_infection(self):
+        infected_agent = [agent for agent in self.model.schedule.agents if agent.health_status == "infected"]
+
+        if not infected_agent:
+            healthy_agent = [agent for agent in self.model.schedule.agents if agent.health_status == "healthy"]
+            if healthy_agent:
+                random.choice(healthy_agent).health_status = "infected"
 
     def step(self):
         """Define agent's behavior per step."""
@@ -309,3 +317,5 @@ class worker_agent(Agent):
             self.infection() #spreads disease
         self.update_infection() #progresses disease
         self.update_production() #updates agent production output.
+        if self.model.schedule.steps % 50 == 0:
+            self.introduce_infection()

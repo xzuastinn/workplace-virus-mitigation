@@ -1,6 +1,5 @@
 import itertools
 import numpy as np
-import time
 from mesa.visualization.modules import CanvasGrid, ChartModule
 from environment.FactoryModel import factory_model
 from src.model.dqn_agent import DQNAgent
@@ -36,22 +35,6 @@ CANVAS_WIDTH = 500
 CANVAS_HEIGHT = 250
 grid = CanvasGrid(agent_portrayal, GRID_WIDTH, GRID_HEIGHT, CANVAS_WIDTH, CANVAS_HEIGHT)
 
-chart = ChartModule(
-    [
-        {"Label": "Healthy", "Color": "Green"},
-        {"Label": "Infected", "Color": "Red"},
-        {"Label": "Recovered", "Color": "Blue"},
-        {"Label": "Death", "Color": "Black"}
-    ]
-)
-
-prod_chart = ChartModule([
-    {"Label": "Productivity", "Color": "Purple"},
-], data_collector_name='datacollector')
-
-daily_infections_chart = ChartModule([
-    {"Label": "Daily Infections", "Color": "Red"}
-], data_collector_name='datacollector')
 
 # Create the server for visualization
 viz_config = FactoryConfig(
@@ -68,60 +51,7 @@ viz_config = FactoryConfig(
     visualization=True
 )
 
-# Define the training loop with optional visualization
-def train_with_visualization(num_episodes=1000, visualize_every=50):
-    for episode in range(num_episodes):
-        is_visualizing = (episode % visualize_every == 0)
-        model = factory_model(
-            width=GRID_WIDTH,
-            height=GRID_HEIGHT,
-            N=100,
-            config=viz_config if is_visualizing else None,
-            visualization=is_visualizing
-        )
-        if is_visualizing:
-            print(f"Starting visualization for episode {episode + 1}")
 
-            # Launch the server for the current episode
-            server = ModularServer(
-                factory_model,
-                [grid, chart, prod_chart, daily_infections_chart],
-                "Factory Infection Model",
-                {"N": 100, "config": viz_config, "width": GRID_WIDTH, "height": GRID_HEIGHT},
-            )
-            server.port = 8511
-            server.launch()
-        
-        # Continue training process here (omit for brevity)
-        # Train agent, collect rewards, update state...
-
-train_with_visualization()
-
-
-# Define agent portrayal for visualization
-def agent_portrayal(agent):
-    portrayal = {"Shape": "circle", "Filled": "true", "r": 0.5}
-    if hasattr(agent, "health_status"):
-        if agent.health_status == "healthy":
-            portrayal["Color"] = "green"
-            portrayal["Layer"] = 1
-        elif agent.health_status == "infected":
-            portrayal["Color"] = "red"
-            portrayal["Layer"] = 2
-        elif agent.health_status == "recovered":
-            portrayal["Color"] = "blue"
-            portrayal["Layer"] = 3
-        elif agent.health_status == "death":
-            portrayal["Color"] = "black"
-            portrayal["Layer"] = 4
-    return portrayal
-
-# Visualization components
-GRID_WIDTH = 50
-GRID_HEIGHT = 25
-CANVAS_WIDTH = 500
-CANVAS_HEIGHT = 250
-grid = CanvasGrid(agent_portrayal, GRID_WIDTH, GRID_HEIGHT, CANVAS_WIDTH, CANVAS_HEIGHT)
 chart = ChartModule(
     [
         {"Label": "Healthy", "Color": "Green"},
@@ -169,69 +99,87 @@ state_dim = 8  # Adjust based on your `get_state` implementation
 action_dim = len(actions)
 agent = DQNAgent(state_dim, action_dim)
 
-# Function to render the grid manually
-def render_grid(grid, model):
-    portrayal_data = []
-    for cell_content in model.grid.coord_iter():
-        if len(cell_content) == 3:  # Ensure proper tuple unpacking
-            content, x, y = cell_content
-            for obj in content:
-                if hasattr(obj, "health_status"):  # Check for valid agent attributes
-                    portrayal = grid.portrayal_method(obj)
-                    portrayal_data.append(portrayal)
-                else:
-                    print(f"Unexpected content type: {type(obj)}")
-    return portrayal_data
+num_episodes = 10
+max_steps_per_episode = 200
 
-num_episodes = 50
-max_steps_per_episode = 2160
+def train_with_toggle(num_episodes, max_steps_per_episode, visualize_every=50, enable_visualization=True):
+    for episode in range(num_episodes):
+        is_visualizing = enable_visualization and (episode % visualize_every == 0)
+        model = factory_model(
+            width=GRID_WIDTH,
+            height=GRID_HEIGHT,
+            N=100,
+            config=viz_config if is_visualizing else None,
+            visualization=is_visualizing
+        )
 
-# Training loop with visualization
-for episode in range(num_episodes):
-    model = factory_model(width=GRID_WIDTH, height=GRID_HEIGHT, N=100, visualization=True)
-    state = np.array(model.get_state())
-    total_reward = 0
+        if is_visualizing:
+            print(f"Starting visualization for episode {episode + 1}")
+            # Launch the server for the current episode
+            server = ModularServer(
+                factory_model,
+                [grid, chart, prod_chart, daily_infections_chart],
+                "Factory Infection Model",
+                {"N": 100, "config": viz_config, "width": GRID_WIDTH, "height": GRID_HEIGHT},
+            )
+            server.port = 8511
+            server.launch()
 
-    for step in range(max_steps_per_episode):
-        # Select an action
-        action_index = agent.select_action(state)
-        action = actions[action_index]
+        state = np.array(model.get_state())
+        total_reward = 0
 
-        # Apply the action
-        model.update_config(action)
+        for step in range(max_steps_per_episode):
+            # Select an action
+            action_index = agent.select_action(state)
+            action = actions[action_index]
 
-        # Advance the simulation
-        step_results = model.step()
-        model.datacollector.collect(model)
+            # Apply the action
+            model.update_config(action)
 
-        # Extract reward and state
-        new_infections = step_results.get('new_infections', 0)  # Default to 0 if key is missing
-        productivity = step_results.get('productivity', 0)      # Default to 0 if key is missing
-        reward = productivity - 2 * new_infections
-        total_reward += reward
+            # Advance the simulation
+            step_results = model.step()
 
-        # Train the agent
-        next_state = np.array(model.get_state())
-        done = model.stats.is_done()
-        agent.store_experience(state, action_index, reward, next_state, done)
-        agent.train()
-        state = next_state
+            # Extract reward and state
+            infected = step_results.get('infected', 0)
+            productivity = step_results.get('productivity', 0)
+            death = step_results.get('death', 0)
 
-        # Update visualization
-        grid_state = render_grid(grid, model)
-        print(f"Grid State: {grid_state}")  # Debugging the rendered grid state
+            # Reward calculation
+            reward = -2 * infected - 100000 * death
+            if productivity >= 0.6:
+                reward += 20 * productivity
+            if productivity < 0.6:
+                reward -= 100000 * (0.6 - productivity)
 
-        # Add a small pause for visualization purposes
-        time.sleep(0.1)
+            total_reward += reward
 
-        if done:
-            break
+            # Train the agent
+            next_state = np.array(model.get_state())
+            done = model.stats.is_done()
+            agent.store_experience(state, action_index, reward, next_state, done)
+            agent.train()
+            state = next_state
 
-    # Update the target network periodically
-    if episode % 10 == 0:
-        agent.update_target_network()
+            if done:
+                break
 
-    print(f"Episode {episode + 1}/{num_episodes}, Total Reward: {total_reward:.2f}, Epsilon: {agent.epsilon:.4f}")
+        # Update the target network periodically
+        if episode % 10 == 0:
+            agent.update_target_network()
 
-# Save the trained model
-agent.save_model("dqn_factory_model.pth")
+        # Print progress
+        print(f"Episode {episode + 1}/{num_episodes}, Total Reward: {total_reward:.2f}, Epsilon: {agent.epsilon:.4f}")
+
+        print(f"  Cleaning Counter: {model.cleaning_counter}")
+        print(f"  Shifts Counter: {model.shifts_counter}")
+        print(f"  Mask Counter: {model.mask_counter}")
+        print(f"  Splitting Level Counter: {model.splitting_level_counter}")
+        print(f"  Swab Testing Counter: {model.swab_testing_counter}")
+        print(f"  Social Distancing Counter: {model.social_distancing_counter}")
+
+    # Save the trained model
+    agent.save_model("dqn_factory_model.pth")
+    print("Training completed. Model saved as 'dqn_factory_model.pth'.")
+
+
+train_with_toggle(num_episodes, max_steps_per_episode, visualize_every=5, enable_visualization=False)
