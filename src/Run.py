@@ -8,9 +8,9 @@ import numpy as np
 import itertools
 
 # Define the possible values for each parameter
-cleaning_options = [0, 1, 2]  # light, medium, heavy
+cleaning_options = ["light", "medium", "heavy"]  # light, medium, heavy
 splitting_options = [0, 1, 2, 3]  # none, half, quarter, eighth
-testing_options = [0, 1, 2, 3]  # none, light, medium, heavy
+testing_options = ["none", "light", "medium", "heavy"]  # none, light, medium, heavy
 social_distancing_options = [False, True]
 mask_mandate_options = [0, 1, 2, 3]
 shifts_options = [0, 1, 2, 3]  # maps to 1, 2, 3, or 4 shifts per day
@@ -18,9 +18,9 @@ shifts_options = [0, 1, 2, 3]  # maps to 1, 2, 3, or 4 shifts per day
 # Generate all combinations of actions
 actions = [
     {
-        'cleaning': cleaning,
-        'splitting': splitting,
-        'testing': testing,
+        'cleaning_type': cleaning,
+        'splitting_level': splitting,
+        'testing_level': testing,
         'social_distancing': social_distancing,
         'mask_mandate': mask_mandate,
         'shifts': shifts
@@ -57,7 +57,7 @@ def agent_portrayal(agent):
 
 GRID_WIDTH = 50
 GRID_HEIGHT = 25
-CANVAS_WIDTH = 862
+CANVAS_WIDTH = 500
 CANVAS_HEIGHT = 250
 
 # Set up the grid size and visualization
@@ -89,7 +89,7 @@ viz_config = FactoryConfig(
     cleaning_type='light',
     testing_level='light',
     social_distancing=True,
-    mask_mandate=2,
+    mask_mandate=0,
     shifts_per_day=4,
     steps_per_day=24,
     visualization=True
@@ -99,7 +99,7 @@ viz_config = FactoryConfig(
 state_dim = 8
 action_dim = len(actions)  # Number of possible actions
 agent = DQNAgent(state_dim, action_dim)
-agent.load_model("dqn_factory_model.pth")  # Load the trained weights
+#agent.load_model("dqn_factory_model.pth")  # Load the trained weights
 
 # Create a server for the model
 def factory_model_with_dqn(N, config, width, height):
