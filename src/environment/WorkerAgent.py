@@ -113,7 +113,7 @@ class worker_agent(Agent):
 
     def move(self):
         """Move the agent to a random valid position on the grid."""
-        if self.is_quarantined or self.is_dead: #dont need to move quarantined or dead agents
+        if self.is_quarantined or self.is_dead:
             return
 
         if self.base_position is None:
@@ -125,41 +125,55 @@ class worker_agent(Agent):
             self.update_base_position()
             return
 
-        if self.model.social_distancing: #handles social_distancing based on shift changes so that agents start atleast 1 block away
+        if self.model.social_distancing:
             valid_positions = []
             check_positions = self.get_valid_positions()
-            MINIMUM_DISTANCE = 2
+            MINIMUM_DISTANCE = 2  # Explicitly define minimum distance for social distancing
             
-            for pos in check_positions: #Calculates new valid poisitons based on whether or not social distancing is being adhered to
+            for pos in check_positions:
                 is_valid = True
-                for neighbor_pos in self.model.grid.iter_neighborhood(
-                    pos, moore=True, radius=MINIMUM_DISTANCE
-                ):
-                    if (0 <= neighbor_pos[0] < self.model.grid.width and 
-                        0 <= neighbor_pos[1] < self.model.grid.height):
-                        cell_contents = self.model.grid.get_cell_list_contents([neighbor_pos])
-                        if any(isinstance(a, type(self)) for a in cell_contents):
-                            is_valid = False
-                            break
+                # Check all positions within the minimum distance
+                for dx in range(-MINIMUM_DISTANCE, MINIMUM_DISTANCE + 1):
+                    for dy in range(-MINIMUM_DISTANCE, MINIMUM_DISTANCE + 1):
+                        if dx == 0 and dy == 0:
+                            continue
+                        
+                        neighbor_pos = (pos[0] + dx, pos[1] + dy)
+                        if (0 <= neighbor_pos[0] < self.model.grid.width and 
+                            0 <= neighbor_pos[1] < self.model.grid.height):
+                            
+                            manhattan_distance = abs(dx) + abs(dy)
+                            if manhattan_distance < MINIMUM_DISTANCE:
+                                cell_contents = self.model.grid.get_cell_list_contents([neighbor_pos])
+                                if any(isinstance(a, type(self)) for a in cell_contents):
+                                    is_valid = False
+                                    break
+                    
+                    if not is_valid:
+                        break
                 
                 if is_valid:
                     valid_positions.append(pos)
             
             if not valid_positions:
+                # If no position maintains social distance, find position with fewest neighbors
                 min_neighbors = float('inf')
                 best_positions = []
                 
-                for pos in check_positions: #if no valid_positions are found while adhereing to SD, choose the position with least neighbors.
-                    neighbor_count = sum(
-                        1 for neighbor_pos in self.model.grid.iter_neighborhood(
-                            pos, moore=True, radius=MINIMUM_DISTANCE
-                        )
-                        if (0 <= neighbor_pos[0] < self.model.grid.width and 
-                            0 <= neighbor_pos[1] < self.model.grid.height and
-                            any(isinstance(a, type(self)) 
-                                for a in self.model.grid.get_cell_list_contents([neighbor_pos]))
-                        )
-                    )
+                for pos in check_positions:
+                    neighbor_count = 0
+                    for dx in range(-MINIMUM_DISTANCE, MINIMUM_DISTANCE + 1):
+                        for dy in range(-MINIMUM_DISTANCE, MINIMUM_DISTANCE + 1):
+                            if dx == 0 and dy == 0:
+                                continue
+                            
+                            neighbor_pos = (pos[0] + dx, pos[1] + dy)
+                            if (0 <= neighbor_pos[0] < self.model.grid.width and 
+                                0 <= neighbor_pos[1] < self.model.grid.height):
+                                
+                                cell_contents = self.model.grid.get_cell_list_contents([neighbor_pos])
+                                if any(isinstance(a, type(self)) for a in cell_contents):
+                                    neighbor_count += 1
                     
                     if neighbor_count < min_neighbors:
                         min_neighbors = neighbor_count
@@ -174,7 +188,6 @@ class worker_agent(Agent):
         if valid_positions:
             new_position = random.choice(valid_positions)
             self.model.grid.move_agent(self, new_position)
-
 
     def get_infection_probability(self, distance, had_covid):
         """Calculate infection probability based on distance and immunity status."""
