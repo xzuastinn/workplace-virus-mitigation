@@ -102,7 +102,7 @@ agent = DQNAgent(state_dim, action_dim)
 num_episodes = 10
 max_steps_per_episode = 200
 
-def train_with_toggle(num_episodes, visualize_every=50, enable_visualization=True):
+def train_with_toggle(num_episodes, max_steps_per_episode, visualize_every=50, enable_visualization=True):
     for episode in range(num_episodes):
         is_visualizing = enable_visualization and (episode % visualize_every == 0)
         model = factory_model(
@@ -175,4 +175,4 @@ def train_with_toggle(num_episodes, visualize_every=50, enable_visualization=Tru
     print("Training completed. Model saved as 'dqn_factory_model.pth'.")
 
 
-train_with_toggle(num_episodes, visualize_every=5, enable_visualization=False)
+train_with_toggle(num_episodes, max_steps_per_episode, visualize_every=5, enable_visualization=False)
