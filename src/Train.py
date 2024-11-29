@@ -103,6 +103,12 @@ num_episodes = 10
 max_steps_per_episode = 200
 
 def train_with_toggle(num_episodes, max_steps_per_episode, visualize_every=50, enable_visualization=True):
+    total_cleaning_counter = {"light": 0, "medium": 0, "heavy": 0}
+    total_shifts_counter = {"1": 0, "2": 0, "3": 0, "4": 0}
+    total_mask_counter = {True: 0, False: 0}
+    total_splitting_level_counter = {"0": 0, "1": 0, "2": 0, "3": 0}
+    total_swab_testing_counter = {"none": 0, "light": 0, "medium": 0, "heavy": 0}
+    total_social_distancing_counter = {True: 0, False: 0}
     for episode in range(num_episodes):
         is_visualizing = enable_visualization and (episode % visualize_every == 0)
         model = factory_model(
@@ -176,10 +182,29 @@ def train_with_toggle(num_episodes, max_steps_per_episode, visualize_every=50, e
         print(f"  Splitting Level Counter: {model.splitting_level_counter}")
         print(f"  Swab Testing Counter: {model.swab_testing_counter}")
         print(f"  Social Distancing Counter: {model.social_distancing_counter}")
+        for key in total_cleaning_counter:
+            total_cleaning_counter[key] += model.cleaning_counter[key]
+        for key in total_shifts_counter:
+            total_shifts_counter[key] += model.shifts_counter[key]
+        for key in total_mask_counter:
+            total_mask_counter[key] += model.mask_counter[key]
+        for key in total_splitting_level_counter:
+            total_splitting_level_counter[key] += model.splitting_level_counter[key]
+        for key in total_swab_testing_counter:
+            total_swab_testing_counter[key] += model.swab_testing_counter[key]
+        for key in total_social_distancing_counter:
+            total_social_distancing_counter[key] += model.social_distancing_counter[key]
 
     # Save the trained model
     agent.save_model("dqn_factory_model.pth")
     print("Training completed. Model saved as 'dqn_factory_model.pth'.")
+    print(f"\nTotal Cleaning Counter: {total_cleaning_counter}")
+    print(f"Total Shifts Counter: {total_shifts_counter}")
+    print(f"Total Mask Counter: {total_mask_counter}")
+    print(f"Total Splitting Level Counter: {total_splitting_level_counter}")
+    print(f"Total Swab Testing Counter: {total_swab_testing_counter}")
+    print(f"Total Social Distancing Counter: {total_social_distancing_counter}")
+
 
 
 train_with_toggle(num_episodes, max_steps_per_episode, visualize_every=5, enable_visualization=False)
