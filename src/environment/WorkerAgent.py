@@ -231,6 +231,9 @@ class worker_agent(Agent):
 
     def update_production(self):
         """Update agent's current production based on various factors."""
+        if self in self.model.inactive_agents:
+            self.current_production = 0
+            return
         production = self.base_production
 
         if self.health_status == "healthy":
@@ -273,9 +276,6 @@ class worker_agent(Agent):
 
         if self.is_quarantined:
             production = 0 #agent in quarantine has 0 production
-
-        if self.on_shift == False:
-            production = 0
 
         self.current_production = production
 

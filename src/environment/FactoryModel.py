@@ -62,8 +62,8 @@ class factory_model(Model):
 
         self.active_agents = []
         self.inactive_agents = []
-        print("InitConfig Social Distancing:", config.social_distancing)
-        print("InitConfigMask Mandate:", config.mask_mandate)
+        #print("InitConfig Social Distancing:", config.social_distancing)
+        #print("InitConfigMask Mandate:", config.mask_mandate)
         self.initialize_agents()
         self.initialize_datacollector()
 
@@ -113,6 +113,7 @@ class factory_model(Model):
                 worker.on_shift = True
                 self.active_agents.append(worker)
             else:
+                print('here')
                 worker.on_shift = False
                 self.inactive_agents.append(worker)
                 self.schedule.add(worker)
@@ -145,12 +146,12 @@ class factory_model(Model):
         self.current_step_in_day = self.current_step % self.steps_per_day
         if self.current_step_in_day == 0:
             self.current_day += 1
-        print(f'Mask_mandate level {self.mask_mandate}')
-        print(f'Social Distancing {self.social_distancing}' )
-        print(f'Splitting lvl {self.splitting_level}')
-        print(f'testing lvl {self.test_lvl}')
-        print(f'shifts per day {self.shifts_per_day}')
-        print(f'cleaning {self.initial_cleaning}')
+        #print(f'Mask_mandate level {self.mask_mandate}')
+        #print(f'Social Distancing {self.social_distancing}' )
+        #print(f'Splitting lvl {self.splitting_level}')
+        #print(f'testing lvl {self.test_lvl}')
+        #print(f'shifts per day {self.shifts_per_day}')
+        #print(f'cleaning {self.initial_cleaning}')
         self.process_scheduled_events()  # Runs all scheduled events for the current step
 
         pre_step_infected = self.stats.count_health_status("infected")
