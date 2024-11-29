@@ -99,7 +99,7 @@ viz_config = FactoryConfig(
 state_dim = 8
 action_dim = len(actions)  # Number of possible actions
 agent = DQNAgent(state_dim, action_dim)
-#agent.load_model("dqn_factory_model.pth")  # Load the trained weights
+agent.load_model("dqn_factory_model.pth")  # Load the trained weights
 
 # Create a server for the model
 def factory_model_with_dqn(N, config, width, height):
