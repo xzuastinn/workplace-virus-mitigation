@@ -264,7 +264,7 @@ class factory_model(Model):
 
         if "splitting_level" in action_dict:
             self.splitting_level = action_dict["splitting_level"]
-            self.splitting_level[action_dict["splitting_level"]] += 1
+            #self.splitting_level[action_dict["splitting_level"]] += 1
 
         if "testing_level" in action_dict:
             self.test_lvl = action_dict["testing_level"]
