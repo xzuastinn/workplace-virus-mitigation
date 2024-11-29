@@ -136,11 +136,10 @@ def train_with_toggle(num_episodes, max_steps_per_episode, visualize_every=50, e
 
         for step in range(max_steps_per_episode):
             # Select an action
-            action_index = agent.select_action(state)
-            action = actions[action_index]
-
-            # Apply the action
-            model.update_config(action)
+            if step % 24 == 0:
+                action_index = agent.select_action(state)
+                action = actions[action_index]
+                model.update_config(action)
 
             # Advance the simulation
             step_results = model.step()
@@ -162,8 +161,9 @@ def train_with_toggle(num_episodes, max_steps_per_episode, visualize_every=50, e
             # Train the agent
             next_state = np.array(model.get_state())
             done = model.stats.is_done()
-            agent.store_experience(state, action_index, reward, next_state, done)
-            agent.train()
+            if step % 24 == 0:
+                agent.store_experience(state, action_index, reward, next_state, done)
+                agent.train()
             state = next_state
 
             if done:
