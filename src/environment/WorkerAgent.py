@@ -13,7 +13,7 @@ class worker_agent(Agent):
         self.recovery_time = 0 #tracks how long an agent is in recovery for
         self.had_covid = False
         self.is_quarantined = False
-        self.base_production = 1 #random base production value for each agent
+        self.base_production = 1
         self.current_production = self.base_production
         self.confined_to_2x2 = False
         self.confined_steps = 0

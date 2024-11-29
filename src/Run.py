@@ -100,8 +100,8 @@ action_dim = len(actions)  # Number of possible actions
 agent = DQNAgent(state_dim, action_dim)
 agent.load_model("dqn_factory_model.pth")  # Load the trained weights
 
-# Create a server for the model
-def factory_model_with_dqn(N, config, width, height):
+def factory_model_with_dqn(N, config, width, height, dqn_agent, action_space):
+    """Creates and returns a factory model that uses the trained DQN for decision making"""
     model = factory_model(
         width=width,
         height=height,
@@ -110,16 +110,62 @@ def factory_model_with_dqn(N, config, width, height):
         visualization=True
     )
     
-    state = np.array(model.get_state())
-    for step in range(model.steps_per_day):  # Run for one day
-        # Select action using the trained model
-        action_index = agent.select_action(state, train=False)  # Use train=False to disable exploration
-        action = actions[action_index]
-
-        # Apply action and advance the simulation
-        model.update_config(action)
-        step_results = model.step()
-        state = np.array(model.get_state())
+    # Store the original step function
+    original_step = model.step
+    
+    def new_step():
+        # Get current state and make decision if it's time
+        if model.schedule.steps % model.steps_per_day == 0:  # Beginning of day
+            state = np.array(model.get_state())
+            state_tensor = torch.FloatTensor(state)  # Convert to tensor
+            
+            with torch.no_grad():
+                action_index = dqn_agent.select_action(state_tensor, train=False)
+                action = action_space[action_index]
+            
+            print(f"\nDQN Action at step {model.schedule.steps}, day {model.schedule.steps // model.steps_per_day}:")
+            print(f"Current state: {state}")
+            print(f"Selected configuration: {action}")
+            
+            # Apply the grid splitting changes first
+            if action['splitting_level'] != model.grid_manager.splitting_level:
+                active_agents = [agent for agent in model.schedule.agents 
+                               if not agent.is_dead and not agent.is_quarantined]
+                
+                # Remove all active agents
+                for agent in active_agents:
+                    if agent.pos is not None:
+                        model.grid.remove_agent(agent)
+                        agent.pos = None
+                
+                # Update splitting level and get new positions
+                model.splitting_level = action['splitting_level']
+                positions = model.grid_manager.get_random_positions(len(active_agents))
+                
+                # Place agents in new positions
+                for i, agent in enumerate(active_agents):
+                    if i < len(positions):
+                        new_pos = positions[i]
+                        if model.grid.is_cell_empty(new_pos):
+                            model.grid.place_agent(agent, new_pos)
+                            agent.set_base_position(new_pos)
+            
+            model.update_config(action)
+            
+            #print(f"Updated configuration:")
+            #print(f"Cleaning type: {model.initial_cleaning}")
+            #print(f"Splitting level: {model.grid_manager.splitting_level}")
+            #print(f"Testing level: {model.test_lvl}")
+            #print(f"Social distancing: {model.social_distancing}")
+            #print(f"Mask mandate: {model.mask_mandate}")
+            #print(f"Shifts per day: {model.shifts_per_day}")
+        
+        # Call the original step function
+        return original_step()
+    
+    # Replace the model's step function
+    model.step = new_step
+    
     return model
 
 # Visualization Server
@@ -127,7 +173,14 @@ server = ModularServer(
     factory_model_with_dqn,
     [grid, chart, prod_chart, daily_infections_chart],
     "Factory Infection Model with DQN",
-    {"N": 100, "config": viz_config, "width": GRID_WIDTH, "height": GRID_HEIGHT}
+    {
+        "N": 100, 
+        "config": viz_config, 
+        "width": GRID_WIDTH, 
+        "height": GRID_HEIGHT,
+        "dqn_agent": agent,  # Pass the DQN agent
+        "action_space": actions  # Pass the action space
+    }
 )
 
 server.port = 8511
