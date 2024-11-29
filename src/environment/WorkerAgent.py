@@ -241,25 +241,25 @@ class worker_agent(Agent):
         elif self.health_status == "infected":
             production *= 0.2 #20% production for sick agents.
         elif self.health_status == "recovered":
-            production *= 0.90 #90% production for recovered
+            production *= 0.95 #95% production for recovered
         elif self.health_status == "death":
             production *= 0
             self.current_production = 0
             return
         
         shift_penalty = {
-            1: 0.6,   # One shift - 40% penalty
-            2: 0.8,   # Two shifts - 20% reduction
-            3: 0.9,   # Three shifts - 10% reduction
+            1: 0.8,   # One shift - 20% penalty
+            2: 0.9,   # Two shifts - 10% reduction
+            3: 0.95,   # Three shifts - 5% reduction
             4: 1.0    # Four shifts - no reduction
         }.get(self.model.shifts_per_day, 1.0)
         production *= shift_penalty
         
         splitting_level_penalties = {
             0: 1.0,   # No penalty for full grid
-            1: 0.90,  # 10% penalty for half grid
-            2: 0.80,  # 20% penalty for quarter grid
-            3: 0.65   # 35% penalty for eighth grid
+            1: 0.95,  # 5% penalty for half grid
+            2: 0.90,  # 10% penalty for quarter grid
+            3: 0.8   # 20% penalty for eighth grid
         }
         production *= splitting_level_penalties.get(self.model.splitting_level, 1.0)
 
