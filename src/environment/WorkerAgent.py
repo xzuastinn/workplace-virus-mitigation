@@ -20,6 +20,7 @@ class worker_agent(Agent):
         self.base_position = None
         self.steps_since_base_change = 0
         self.is_dead = False
+        self.on_shift = True 
 
     def get_section_bounds(self):
         """Get the boundaries of the agent's assigned section"""

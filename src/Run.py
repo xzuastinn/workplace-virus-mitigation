@@ -112,53 +112,82 @@ def factory_model_with_dqn(N, config, width, height, dqn_agent, action_space):
     
     # Store the original step function
     original_step = model.step
+    last_day = -1  # Track the last day we made a decision
     
     def new_step():
-        # Get current state and make decision if it's time
-        if model.schedule.steps % model.steps_per_day == 0:  # Beginning of day
+        nonlocal last_day
+        current_day = model.current_day
+        
+        # Make decisions at the start of each new day
+        if current_day > last_day:
+            last_day = current_day
             state = np.array(model.get_state())
-            state_tensor = torch.FloatTensor(state)  # Convert to tensor
+            state_tensor = torch.FloatTensor(state)
             
             with torch.no_grad():
+                # Force some exploration during visualization
                 action_index = dqn_agent.select_action(state_tensor, train=False)
                 action = action_space[action_index]
             
-            print(f"\nDQN Action at step {model.schedule.steps}, day {model.schedule.steps // model.steps_per_day}:")
-            print(f"Current state: {state}")
-            print(f"Selected configuration: {action}")
+            print(f"\nDay {current_day} - Current State:")
+            print(f"Healthy: {state[0]}, Infected: {state[1]}, Recovered: {state[2]}, Dead: {state[3]}")
+            print(f"Productivity: {state[4]:.2f}, Step in Day: {state[5]}")
+            print(f"Social Distancing: {bool(state[6])}, Mask Mandate: {bool(state[7])}")
             
-            # Apply the grid splitting changes first
-            if action['splitting_level'] != model.grid_manager.splitting_level:
-                active_agents = [agent for agent in model.schedule.agents 
-                               if not agent.is_dead and not agent.is_quarantined]
-                
-                # Remove all active agents
-                for agent in active_agents:
-                    if agent.pos is not None:
-                        model.grid.remove_agent(agent)
-                        agent.pos = None
-                
-                # Update splitting level and get new positions
-                model.splitting_level = action['splitting_level']
-                positions = model.grid_manager.get_random_positions(len(active_agents))
-                
-                # Place agents in new positions
-                for i, agent in enumerate(active_agents):
-                    if i < len(positions):
-                        new_pos = positions[i]
-                        if model.grid.is_cell_empty(new_pos):
-                            model.grid.place_agent(agent, new_pos)
-                            agent.set_base_position(new_pos)
+            print("\nCurrent Configuration:")
+            print(f"Cleaning: {model.initial_cleaning}")
+            print(f"Splitting: {model.grid_manager.splitting_level}")
+            print(f"Testing: {model.test_lvl}")
+            print(f"Social Distancing: {model.social_distancing}")
+            print(f"Mask Mandate: {model.mask_mandate}")
+            print(f"Shifts: {model.shifts_per_day}")
             
-            model.update_config(action)
+            print("\nProposed Configuration:")
+            print(f"Cleaning: {action['cleaning_type']}")
+            print(f"Splitting: {action['splitting_level']}")
+            print(f"Testing: {action['testing_level']}")
+            print(f"Social Distancing: {action['social_distancing']}")
+            print(f"Mask Mandate: {action['mask_mandate']}")
+            print(f"Shifts: {action['shifts_per_day']}")
             
-            #print(f"Updated configuration:")
-            #print(f"Cleaning type: {model.initial_cleaning}")
-            #print(f"Splitting level: {model.grid_manager.splitting_level}")
-            #print(f"Testing level: {model.test_lvl}")
-            #print(f"Social distancing: {model.social_distancing}")
-            #print(f"Mask mandate: {model.mask_mandate}")
-            #print(f"Shifts per day: {model.shifts_per_day}")
+            # Check if the configuration actually changed
+            config_changed = (
+                action['cleaning_type'] != model.initial_cleaning or
+                action['splitting_level'] != model.grid_manager.splitting_level or
+                action['testing_level'] != model.test_lvl or
+                action['social_distancing'] != model.social_distancing or
+                action['mask_mandate'] != model.mask_mandate or
+                action['shifts_per_day'] != model.shifts_per_day
+            )
+            
+            if config_changed:
+                print("\nApplying configuration changes...")
+                # Apply the grid splitting changes first if needed
+                if action['splitting_level'] != model.grid_manager.splitting_level:
+                    active_agents = [agent for agent in model.schedule.agents 
+                                   if not agent.is_dead and not agent.is_quarantined]
+                    
+                    # Remove all active agents
+                    for agent in active_agents:
+                        if agent.pos is not None:
+                            model.grid.remove_agent(agent)
+                            agent.pos = None
+                    
+                    # Update splitting level and get new positions
+                    model.splitting_level = action['splitting_level']
+                    positions = model.grid_manager.get_random_positions(len(active_agents))
+                    
+                    # Place agents in new positions
+                    for i, agent in enumerate(active_agents):
+                        if i < len(positions):
+                            new_pos = positions[i]
+                            if model.grid.is_cell_empty(new_pos):
+                                model.grid.place_agent(agent, new_pos)
+                                agent.set_base_position(new_pos)
+                
+                model.update_config(action)
+            else:
+                print("\nNo configuration changes needed")
         
         # Call the original step function
         return original_step()
@@ -167,6 +196,7 @@ def factory_model_with_dqn(N, config, width, height, dqn_agent, action_space):
     model.step = new_step
     
     return model
+
 
 # Visualization Server
 server = ModularServer(
