@@ -170,9 +170,17 @@ def train_with_toggle(num_episodes, max_steps_per_episode, visualize_every=50, e
         # Print progress
         print(f"Episode {episode + 1}/{num_episodes}, Total Reward: {total_reward:.2f}, Epsilon: {agent.epsilon:.4f}")
 
+        print(f"  Cleaning Counter: {model.cleaning_counter}")
+        print(f"  Shifts Counter: {model.shifts_counter}")
+        print(f"  Mask Counter: {model.mask_counter}")
+        print(f"  Splitting Level Counter: {model.splitting_level_counter}")
+        print(f"  Swab Testing Counter: {model.swab_testing_counter}")
+        print(f"  Social Distancing Counter: {model.social_distancing_counter}")
+
     # Save the trained model
     agent.save_model("dqn_factory_model.pth")
     print("Training completed. Model saved as 'dqn_factory_model.pth'.")
 
 
 train_with_toggle(num_episodes, max_steps_per_episode, visualize_every=5, enable_visualization=False)
+
