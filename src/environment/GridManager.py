@@ -103,8 +103,9 @@ class GridManager:
         """Function to manage how a shift change is ran."""
         self.model.current_shift = (self.model.current_shift + 1) % self.model.shifts_per_day
 
-        active_agents = [agent for agent in self.model.schedule.agents if agent.on_shift]
-        inactive_agents = [agent for agent in self.model.schedule.agents if not agent.on_shift]
+        active_agents = [agent for agent in self.model.active_agents if not agent.is_quarantined]
+        inactive_agents = [agent for agent in self.model.inactive_agents 
+                           if not agent.is_quarantined]
 
         for agent in active_agents[:]:
             if agent.pos is not None:
@@ -115,48 +116,39 @@ class GridManager:
             self.model.inactive_agents.append(agent)
 
         occupied_positions = set()
-        num_sections = 2 ** self._splitting_level if self._splitting_level > 0 else 1
-        agents_per_section = len(inactive_agents) // num_sections
-        remainder = len(inactive_agents) % num_sections
-
-        for section_index in range(num_sections):
-            section_width = self.model.grid.width // num_sections
-            section_start = section_index * section_width
+        for agent in inactive_agents[:]:
+            current_section_index = self.get_section_index(agent.unique_id)
+            section_width = self.model.grid.width // (2 ** self._splitting_level if self._splitting_level > 0 else 1)
+            section_start = current_section_index * section_width
             section_end = section_start + section_width
 
-            section_agents = inactive_agents[
-                section_index * agents_per_section + min(section_index, remainder):
-                (section_index + 1) * agents_per_section + min(section_index + 1, remainder)
-            ]
+            attempts = 0
+            max_attempts = 50
+            placed = False
 
-            for agent in section_agents:
-                attempts = 0
-                max_attempts = 50
-                placed = False
+            while attempts < max_attempts and not placed:
+                new_x = self.model.random.randrange(section_start, section_end)
+                new_y = self.model.random.randrange(self.model.grid.height)
+                new_pos = (new_x, new_y)
 
-                while attempts < max_attempts and not placed:
-                    new_x = self.model.random.randrange(section_start, section_end)
-                    new_y = self.model.random.randrange(self.model.grid.height)
-                    new_pos = (new_x, new_y)
+                if new_pos not in occupied_positions:
+                    self.model.grid.place_agent(agent, new_pos)
+                    agent.set_base_position(new_pos)
+                    agent.steps_since_base_change = 0
+                    agent.on_shift = True
+                    occupied_positions.add(new_pos)
+                    agent.section = f'section_{current_section_index}'
+                    agent.last_section = current_section_index
 
-                    if new_pos not in occupied_positions:
-                        self.model.grid.place_agent(agent, new_pos)
-                        agent.set_base_position(new_pos)
-                        agent.steps_since_base_change = 0
-                        agent.on_shift = True
-                        occupied_positions.add(new_pos)
-                        agent.section = f'section_{section_index}'
-                        agent.last_section = section_index
-
-                        self.model.inactive_agents.remove(agent)
-                        self.model.active_agents.append(agent)
-
-                        placed = True
-                    attempts += 1
-
-                if not placed:
-                    self.model.schedule.remove(agent)
                     self.model.inactive_agents.remove(agent)
+                    self.model.active_agents.append(agent)
+
+                    placed = True
+                attempts += 1
+
+            if not placed:
+                self.model.schedule.remove(agent)
+                self.model.inactive_agents.remove(agent)
 
         self.model.next_shift_change = ((self.model.current_step_in_day + self.model.steps_per_shift) % self.model.steps_per_day)
         

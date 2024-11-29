@@ -122,7 +122,7 @@ class factory_model(Model):
                 worker.on_shift = True
                 self.active_agents.append(worker)
             else:
-                print('here')
+                #print('here')
                 worker.on_shift = False
                 self.inactive_agents.append(worker)
                 self.schedule.add(worker)
