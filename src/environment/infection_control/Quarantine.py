@@ -29,8 +29,28 @@ class QuarantineManager:
     def return_from_quarantine(self, agent):
         """Function to return a recovered agent from quarantine"""
         if agent in self.quarantine_zone:
-            new_pos = self.model.grid_manager.get_valid_position(agent) #Gets position to drop off agent
-            self.quarantine_zone.remove(agent)
-            self.model.grid.place_agent(agent, new_pos)
-            agent.is_quarantined = False
-            agent.set_base_position(new_pos)
+            attempts = 0
+            max_attempts = 40
+            valid_pos = None
+            
+            while attempts < max_attempts and valid_pos is None:
+                pos = self.model.grid_manager.get_valid_position(agent)
+                if (0 <= pos[0] < self.model.grid.width and 
+                    0 <= pos[1] < self.model.grid.height):
+                    valid_pos = pos
+                attempts += 1
+                
+            if valid_pos is None:
+                print(f"Warning: Could not find valid position for agent {agent.unique_id}")
+                valid_pos = (0, 0)
+                
+            try:
+                self.quarantine_zone.remove(agent)
+                self.model.grid.place_agent(agent, valid_pos)
+                agent.is_quarantined = False
+                agent.set_base_position(valid_pos)
+            except Exception as e:
+                print(f"Error placing agent {agent.unique_id} at position {valid_pos}: {str(e)}")
+                # If placement fails, keep agent in quarantine
+                if agent not in self.quarantine_zone:
+                    self.quarantine_zone.append(agent)

@@ -64,12 +64,12 @@ prod_chart = ChartModule([{"Label": "Productivity", "Color": "Purple"}])
 daily_infections_chart = ChartModule([{"Label": "Daily Infections", "Color": "Red"}])
 
 # Define the possible values for each parameter
-cleaning_options = [0, 1, 2]  # light, medium, heavy
+cleaning_options = ['light', 'medium', 'heavy']  # light, medium, heavy
 splitting_options = [0, 1, 2, 3]  # none, half, quarter, eighth
-testing_options = [0, 1, 2, 3]  # none, light, medium, heavy
+testing_options = ['none', 'light', 'medium', 'heavy']  # none, light, medium, heavy
 social_distancing_options = [False, True]
 mask_mandate_options = [False, True]
-shifts_options = [0, 1, 2, 3]  # maps to 1, 2, 3, or 4 shifts per day
+shifts_options = [1, 2, 3, 4]  # maps to 1, 2, 3, or 4 shifts per day
 
 # Generate all combinations
 combinations = list(itertools.product(
@@ -84,12 +84,12 @@ combinations = list(itertools.product(
 # Convert combinations to dictionaries
 actions = [
     {
-        'cleaning': cleaning,
-        'splitting': splitting,
-        'testing': testing,
+        'cleaning_type': cleaning,
+        'splitting_level': splitting,
+        'testing_level': testing,
         'social_distancing': social_distancing,
         'mask_mandate': mask_mandate,
-        'shifts': shifts
+        'shifts_per_day': shifts
     }
     for cleaning, splitting, testing, social_distancing, mask_mandate, shifts in combinations
 ]

@@ -66,8 +66,8 @@ class factory_model(Model):
         self.swab_testing_counter = {"none": 0, "light": 0, "medium": 0, "heavy": 0} # done
         self.cleaning_counter = {"light": 0, "medium": 0, "heavy": 0}
         self.shifts_counter = {"1": 0, "2": 0, "3": 0, "4": 0}
-        self.mask_counter = {"0": 0, "1": 0, "2": 0, "3": 0}
-        self.social_distancing_counter = 0 # done
+        self.mask_counter = {True: 0, False: 0}
+        self.social_distancing_counter = {True: 0, False: 0}
         self.splitting_level_counter = {"0": 0, "1": 0, "2": 0, "3": 0}
 
     def get_state(self):
@@ -227,7 +227,7 @@ class factory_model(Model):
 
         if "splitting_level" in action_dict:
             self.splitting_level = action_dict["splitting_level"]
-            # self.splitting_level[action_dict["splitting_level"]] += 1
+            self.splitting_level_counter[str(action_dict["splitting_level"])] += 1
 
         if "testing_level" in action_dict:
             self.test_lvl = action_dict["testing_level"]
@@ -236,11 +236,11 @@ class factory_model(Model):
 
         if "social_distancing" in action_dict:
             self.social_distancing = action_dict["social_distancing"]
-            self.social_distancing_counter += 1
+            self.social_distancing_counter[action_dict["social_distancing"]] += 1
 
         if "mask_mandate" in action_dict:
             self.mask_mandate = action_dict["mask_mandate"]
-            #self.mask_counter[str(action_dict["mask_mandate"])] += 1
+            self.mask_counter[(action_dict["mask_mandate"])] += 1
 
         if "shifts_per_day" in action_dict:
             self.shifts_per_day = action_dict["shifts_per_day"]
