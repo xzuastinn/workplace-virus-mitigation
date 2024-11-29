@@ -1,5 +1,6 @@
 import itertools
 import random
+import matplotlib.pyplot as plt
 import numpy as np
 from mesa.visualization.modules import CanvasGrid, ChartModule
 from environment.FactoryModel import factory_model
@@ -96,7 +97,7 @@ actions = [
 ]
 
 # Initialize the environment and agent
-state_dim = 8  # Adjust based on your `get_state` implementation
+state_dim = 8
 action_dim = len(actions)
 agent = DQNAgent(state_dim, action_dim)
 
@@ -107,7 +108,6 @@ def find_empty_cell(model, x_start=None, x_end=None):
     width = model.grid.width
     height = model.grid.height
     
-    # If no bounds provided, search entire grid
     if x_start is None:
         x_start = 0
     if x_end is None:
@@ -120,7 +120,6 @@ def find_empty_cell(model, x_start=None, x_end=None):
             if model.grid.is_cell_empty((x, y)):
                 empty_cells.append((x, y))
     
-    # Return random empty cell if available
     if empty_cells:
         return random.choice(empty_cells)
     return None
@@ -170,7 +169,7 @@ def train_with_toggle(dqn_agent, num_episodes, max_steps_per_episode, visualize_
                         active_agents = [agent for agent in model.schedule.agents 
                                        if not agent.is_dead and not agent.is_quarantined]
                         
-                        # First remove all active agents
+                        #remove all active agents
                         for agent in active_agents:
                             if agent.pos is not None:
                                 model.grid.remove_agent(agent)
@@ -184,7 +183,6 @@ def train_with_toggle(dqn_agent, num_episodes, max_steps_per_episode, visualize_
                                     model.grid.place_agent(agent, new_pos)
                                     agent.set_base_position(new_pos)
                                 else:
-                                    # Find new empty position if intended one is occupied
                                     x_start = (model.grid.width // (2 ** action['splitting_level'])) * (i % (2 ** action['splitting_level']))
                                     x_end = x_start + (model.grid.width // (2 ** action['splitting_level']))
                                     empty_pos = find_empty_cell(model, x_start, x_end)
@@ -194,7 +192,6 @@ def train_with_toggle(dqn_agent, num_episodes, max_steps_per_episode, visualize_
                 
                 model.update_config(action)
 
-                # Final safety check for any active agents without positions
                 for agent in model.schedule.agents:
                     if not agent.is_dead and not agent.is_quarantined and agent.pos is None:
                         empty_pos = find_empty_cell(model)
@@ -202,7 +199,6 @@ def train_with_toggle(dqn_agent, num_episodes, max_steps_per_episode, visualize_
                             model.grid.place_agent(agent, empty_pos)
                             agent.set_base_position(empty_pos)
 
-            # Rest of the step logic remains the same...
             step_results = model.step()
 
             infected = step_results.get('infected', 0)
@@ -230,6 +226,7 @@ def train_with_toggle(dqn_agent, num_episodes, max_steps_per_episode, visualize_
         # Update the target network periodically
         if episode % 10 == 0:
             dqn_agent.update_target_network()
+        dqn_agent.rewards_history.append(total_reward)
 
         # Print progress
         print(f"Episode {episode + 1}/{num_episodes}, Total Reward: {total_reward:.2f}, Epsilon: {dqn_agent.epsilon:.4f}")
@@ -263,7 +260,36 @@ def train_with_toggle(dqn_agent, num_episodes, max_steps_per_episode, visualize_
     print(f"Total Mask Counter: {total_mask_counter}")
     print(f"Total Splitting Level Counter: {total_splitting_level_counter}")
     print(f"Total Swab Testing Counter: {total_swab_testing_counter}")
-    print(f"Total Social Distancing Counter: {total_social_distancing_counter}")
+    print(f"Total Social Distancing Counter: {total_social_distancing_counter}")    # Save final plots
+    plt.figure(figsize=(15, 10))
+    
+    plt.subplot(2, 2, 1)
+    plt.plot(dqn_agent.q_values_history)
+    plt.title('Final Average Q-Values')
+    plt.xlabel('Training Steps')
+    plt.ylabel('Q-Value')
+    
+    plt.subplot(2, 2, 2)
+    plt.plot(dqn_agent.losses_history)
+    plt.title('Final Training Loss')
+    plt.xlabel('Training Steps')
+    plt.ylabel('Loss')
+    
+    plt.subplot(2, 2, 3)
+    plt.plot(dqn_agent.epsilons_history)
+    plt.title('Final Epsilon Decay')
+    plt.xlabel('Training Steps')
+    plt.ylabel('Epsilon')
+    
+    plt.subplot(2, 2, 4)
+    plt.plot(dqn_agent.rewards_history)
+    plt.title('Final Episode Rewards')
+    plt.xlabel('Episode')
+    plt.ylabel('Total Reward')
+    
+    plt.tight_layout()
+    plt.savefig('final_training_metrics.png')
+    plt.close()
 
 # Then update your function call to:
 train_with_toggle(agent, num_episodes, max_steps_per_episode, visualize_every=5, enable_visualization=False)

@@ -24,6 +24,11 @@ class DQNAgent:
         self.epsilon_decay = 0.999999
         self.epsilon_min = 0.01
         self.batch_size = 64
+        #tracking
+        self.q_values_history = []
+        self.losses_history = []
+        self.epsilons_history = []
+        self.rewards_history = []
 
     def select_action(self, state, train= True):
         if train and random.random() < self.epsilon:
@@ -53,6 +58,11 @@ class DQNAgent:
         target_q_values = rewards + self.gamma * next_q_values * (1 - dones)
 
         loss = torch.nn.functional.mse_loss(q_values, target_q_values.detach())
+        #tracking
+        self.q_values_history.append(q_values.mean().item())
+        self.losses_history.append(loss.item())
+        self.epsilons_history.append(self.epsilon)
+
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
