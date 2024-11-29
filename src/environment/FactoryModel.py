@@ -219,32 +219,46 @@ class factory_model(Model):
 
     
     def update_config(self, action_dict):
-        """Method to update the current factor health configuration. Allows for the 6 variables to be changed during a simulation"""
+        """Method to update the current factory health configuration. Allows for the 6 variables to be changed during a simulation"""
+        print(f"\nUpdating configuration at step {self.current_step} (Day {self.current_day}):")
+        
         if "cleaning_type" in action_dict:
+            old_cleaning = self.initial_cleaning
             self.initial_cleaning = action_dict["cleaning_type"]
             self.grid_manager.set_cleaning_type(action_dict["cleaning_type"])
             self.cleaning_counter[action_dict["cleaning_type"]] += 1
+            print(f"Changed cleaning type: {old_cleaning} -> {action_dict['cleaning_type']}")
 
         if "splitting_level" in action_dict:
+            old_splitting = self._splitting_level
             self.splitting_level = action_dict["splitting_level"]
             self.splitting_level_counter[str(action_dict["splitting_level"])] += 1
+            print(f"Changed splitting level: {old_splitting} -> {action_dict['splitting_level']}")
 
         if "testing_level" in action_dict:
+            old_testing = self.test_lvl
             self.test_lvl = action_dict["testing_level"]
             self.testing.set_testing_level(action_dict["testing_level"])
             self.swab_testing_counter[action_dict["testing_level"]] += 1
+            print(f"Changed testing level: {old_testing} -> {action_dict['testing_level']}")
 
         if "social_distancing" in action_dict:
+            old_distancing = self.social_distancing
             self.social_distancing = action_dict["social_distancing"]
             self.social_distancing_counter[action_dict["social_distancing"]] += 1
+            print(f"Changed social distancing: {old_distancing} -> {action_dict['social_distancing']}")
 
         if "mask_mandate" in action_dict:
+            old_mask = self.mask_mandate
             self.mask_mandate = action_dict["mask_mandate"]
             self.mask_counter[(action_dict["mask_mandate"])] += 1
+            print(f"Changed mask mandate: {old_mask} -> {action_dict['mask_mandate']}")
 
         if "shifts_per_day" in action_dict:
+            old_shifts = self.shifts_per_day
             self.shifts_per_day = action_dict["shifts_per_day"]
             self.steps_per_shift = self.steps_per_day // self.shifts_per_day
             self.next_shift_change = (self.current_step_in_day + self.steps_per_shift) % self.steps_per_day
             self.grid_manager.process_shift_change()
             self.shifts_counter[str(action_dict["shifts_per_day"])] += 1
+            print(f"Changed shifts per day: {old_shifts} -> {action_dict['shifts_per_day']}")
