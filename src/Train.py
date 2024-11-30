@@ -50,7 +50,7 @@ viz_config = FactoryConfig(
     mask_mandate=False,
     shifts_per_day=4,
     steps_per_day=24,
-    visualization=True
+    visualization=False
 )
 
 
@@ -65,10 +65,10 @@ chart = ChartModule(
 prod_chart = ChartModule([{"Label": "Productivity", "Color": "Purple"}])
 daily_infections_chart = ChartModule([{"Label": "Daily Infections", "Color": "Red"}])
 
-# Define the possible values for each parameter
-cleaning_options = ['light', 'medium', 'heavy']  # light, medium, heavy
+#PARAMETERS
+cleaning_options = ['light', 'medium', 'heavy']
 splitting_options = [0, 1, 2, 3]  # none, half, quarter, eighth
-testing_options = ['none', 'light', 'medium', 'heavy']  # none, light, medium, heavy
+testing_options = ['none', 'light', 'medium', 'heavy']
 social_distancing_options = [False, True]
 mask_mandate_options = [False, True]
 shifts_options = [1, 2, 3, 4]  # maps to 1, 2, 3, or 4 shifts per day
@@ -83,7 +83,6 @@ combinations = list(itertools.product(
     shifts_options
 ))
 
-# Convert combinations to dictionaries
 actions = [
     {
         'cleaning_type': cleaning,
@@ -96,15 +95,16 @@ actions = [
     for cleaning, splitting, testing, social_distancing, mask_mandate, shifts in combinations
 ]
 
-# Initialize the environment and agent
 state_dim = 8
 action_dim = len(actions)
 agent = DQNAgent(state_dim, action_dim)
 
-num_episodes = 10
+#TRAINING PARAMETERS
+num_episodes = 100
 max_steps_per_episode = 200
+
 def find_empty_cell(model, x_start=None, x_end=None):
-    """Find an empty cell in the grid within the given x bounds"""
+    """HELPER FUNCTION. Find an empty cell in the grid within the given x bounds"""
     width = model.grid.width
     height = model.grid.height
     
@@ -113,7 +113,6 @@ def find_empty_cell(model, x_start=None, x_end=None):
     if x_end is None:
         x_end = width
 
-    # Get all empty cells within bounds
     empty_cells = []
     for x in range(x_start, x_end):
         for y in range(height):
@@ -124,7 +123,8 @@ def find_empty_cell(model, x_start=None, x_end=None):
         return random.choice(empty_cells)
     return None
 
-def train_with_toggle(dqn_agent, num_episodes, max_steps_per_episode, visualize_every=50, enable_visualization=True):
+def train_with_toggle(dqn_agent, num_episodes, max_steps_per_episode, visualize_every=50, enable_visualization=False):
+    """MAIN TRAINING LOOP"""
     total_cleaning_counter = {"light": 0, "medium": 0, "heavy": 0}
     total_shifts_counter = {"1": 0, "2": 0, "3": 0, "4": 0}
     total_mask_counter = {True: 0, False: 0}
@@ -160,11 +160,10 @@ def train_with_toggle(dqn_agent, num_episodes, max_steps_per_episode, visualize_
             if step % 24 == 0:
                 action_index = dqn_agent.select_action(state)
                 action = actions[action_index]
-                
+                #PROBABLY SHOULD BE MOVED TO GRIDMANAGER. HANDLES NEW SPLIT CHANGE BORDERS
                 if 'splitting_level' in action:
                     old_level = model.grid_manager.splitting_level
                     if old_level != action['splitting_level']:
-                        # Get new positions for the new splitting level
                         positions = model.grid_manager.get_random_positions(model.num_agents)
                         active_agents = [agent for agent in model.schedule.agents 
                                        if not agent.is_dead and not agent.is_quarantined]
@@ -175,7 +174,7 @@ def train_with_toggle(dqn_agent, num_episodes, max_steps_per_episode, visualize_
                                 model.grid.remove_agent(agent)
                                 agent.pos = None
                         
-                        # Place active agents in their new positions
+                        #Place active agents in their new positions
                         for i, agent in enumerate(active_agents):
                             if i < len(positions):
                                 new_pos = positions[i]
@@ -230,7 +229,7 @@ def train_with_toggle(dqn_agent, num_episodes, max_steps_per_episode, visualize_
 
         # Print progress
         print(f"Episode {episode + 1}/{num_episodes}, Total Reward: {total_reward:.2f}, Epsilon: {dqn_agent.epsilon:.4f}")
-
+        # COUNTER PRINTS AT EVERY EPISODE
         print(f"  Cleaning Counter: {model.cleaning_counter}")
         print(f"  Shifts Counter: {model.shifts_counter}")
         print(f"  Mask Counter: {model.mask_counter}")
@@ -254,13 +253,15 @@ def train_with_toggle(dqn_agent, num_episodes, max_steps_per_episode, visualize_
 
     # Save the trained model
     dqn_agent.save_model("dqn_factory_model.pth")
+    #PRINTS FOR TOTAL COUNTS AFTER TRAINING FINISHED
     print("Training completed. Model saved as 'dqn_factory_model.pth'.")
     print(f"\nTotal Cleaning Counter: {total_cleaning_counter}")
     print(f"Total Shifts Counter: {total_shifts_counter}")
     print(f"Total Mask Counter: {total_mask_counter}")
     print(f"Total Splitting Level Counter: {total_splitting_level_counter}")
     print(f"Total Swab Testing Counter: {total_swab_testing_counter}")
-    print(f"Total Social Distancing Counter: {total_social_distancing_counter}")    # Save final plots
+    print(f"Total Social Distancing Counter: {total_social_distancing_counter}")
+    #FINAL PLOTS
     plt.figure(figsize=(15, 10))
     
     plt.subplot(2, 2, 1)
@@ -291,5 +292,4 @@ def train_with_toggle(dqn_agent, num_episodes, max_steps_per_episode, visualize_
     plt.savefig('final_training_metrics.png')
     plt.close()
 
-# Then update your function call to:
 train_with_toggle(agent, num_episodes, max_steps_per_episode, visualize_every=5, enable_visualization=False)
