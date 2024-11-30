@@ -11,22 +11,22 @@ class GridManager:
                 'frequency': 8, 
                 'infection_reduction': 0.35, 
                 'duration': 1,
-                'production_reduction': 0.05  # 5% production reduction
+                'production_reduction': 0.05
             },
             'medium': {
                 'frequency': 16, 
                 'infection_reduction': 0.65, 
                 'duration': 2,
-                'production_reduction': 0.15  # 15% production reduction
+                'production_reduction': 0.15
             },
             'heavy': {
                 'frequency': 16, 
                 'infection_reduction': 0.8, 
                 'duration': 2,
-                'production_reduction': 0.25  # 25% production reduction
+                'production_reduction': 0.25
             }
         }
-        self.current_cleaning = self.model.initial_cleaning #initializes cleaning schedule
+        self.current_cleaning = self.model.initial_cleaning
         self.cleaning_steps_remaining = 0
         self.next_cleaning = { #dictionary for step intervals
             'light': 8,
@@ -128,7 +128,7 @@ class GridManager:
                 if self.model.social_distancing:
                     for occupied_pos in occupied_positions:
                         manhattan_distance = abs(new_x - occupied_pos[0]) + abs(new_y - occupied_pos[1])
-                        if manhattan_distance < 2:  # Enforce 2-cell minimum distance
+                        if manhattan_distance < 2:  #Enforce 2-cell MH minimum distance
                             is_valid = False
                             break
 

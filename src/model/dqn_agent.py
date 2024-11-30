@@ -10,6 +10,7 @@ from collections import deque
 from src.model.qNetwork import QNetwork
 
 class DQNAgent:
+    """Deep Q Network Agent that selections actions based on generated Q values."""
     def __init__(self, state_dim, action_dim):
         self.state_dim = state_dim
         self.action_dim = action_dim
@@ -18,19 +19,18 @@ class DQNAgent:
         self.target_network.load_state_dict(self.q_network.state_dict())
         self.target_network.eval()
 
-        # Improved hyperparameters
-        self.optimizer = optim.Adam(self.q_network.parameters(), lr=0.0001)  # Reduced learning rate
-        self.replay_buffer = deque(maxlen=100000)  # Increased buffer size
-        self.gamma = 0.99  # Slightly reduced discount factor
+        #Hyper Params
+        self.optimizer = optim.Adam(self.q_network.parameters(), lr=0.0001)
+        self.replay_buffer = deque(maxlen=100000)
+        self.gamma = 0.99
         self.epsilon = 1.0
-        self.epsilon_decay = 0.995  # Slower epsilon decay
+        self.epsilon_decay = 0.995
         self.epsilon_min = 0.05
-        self.batch_size = 128  # Increased batch size
+        self.batch_size = 128
         
-        # Add reward scaling
         self.reward_scale = 1e-4  # Scale factor for rewards
         
-        # Add state normalization
+        #state normalization
         self.state_mean = None
         self.state_std = None
         
@@ -40,7 +40,6 @@ class DQNAgent:
         self.epsilons_history = []
         self.rewards_history = []
         
-        # Add gradient clipping threshold
         self.grad_clip = 1.0
 
     def normalize_state(self, state):
@@ -81,7 +80,7 @@ class DQNAgent:
 
         states, actions, rewards, next_states, dones = self.sample_experiences()
         
-        # Double DQN implementation
+        #Double DQN 
         with torch.no_grad():
             next_actions = self.q_network(next_states).max(1)[1]
             next_q_values = self.target_network(next_states).gather(1, next_actions.unsqueeze(1)).squeeze(1)
@@ -89,7 +88,7 @@ class DQNAgent:
 
         current_q_values = self.q_network(states).gather(1, actions.unsqueeze(1)).squeeze(1)
         
-        # Huber loss for robustness
+        #Huber loss
         loss = torch.nn.functional.smooth_l1_loss(current_q_values, target_q_values.detach())
         
         # tracking
@@ -100,14 +99,12 @@ class DQNAgent:
         self.optimizer.zero_grad()
         loss.backward()
         
-        # Gradient clipping
         torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), self.grad_clip)
         
         self.optimizer.step()
         self.epsilon = max(self.epsilon * self.epsilon_decay, self.epsilon_min)
 
     def update_target_network(self):
-        # Soft update
         tau = 0.001
         for target_param, local_param in zip(self.target_network.parameters(), self.q_network.parameters()):
             target_param.data.copy_(tau * local_param.data + (1.0 - tau) * target_param.data)

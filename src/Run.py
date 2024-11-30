@@ -103,7 +103,7 @@ daily_infections_chart = ChartModule([
     {"Label": "Daily Infections", "Color": "Red"}
 ], data_collector_name='datacollector')
 
-#NOT USED 
+#NOT USED?
 viz_config = FactoryConfig(
     width=GRID_WIDTH, 
     height=GRID_HEIGHT, 
@@ -122,7 +122,7 @@ viz_config = FactoryConfig(
 state_dim = 8
 action_dim = len(actions)
 agent = DQNAgent(state_dim, action_dim)
-agent.load_model("dqn_factory_model.pth")  # Load the trained weights
+agent.load_model("dqn_factory_model.pth")  # TRAINING.PY WEIGHTS
 
 def factory_model_with_dqn(N, config, width, height, dqn_agent, action_space):
     """Creates and returns a factory model that uses the trained DQN for decision making"""
@@ -205,16 +205,13 @@ def factory_model_with_dqn(N, config, width, height, dqn_agent, action_space):
             else:
                 print("\nNo configuration changes needed")
         
-        # Call the original step function
         return original_step()
     
-    # Replace the model's step function
     model.step = new_step
     
     return model
 
 
-# Visualization Server
 server = ModularServer(
     factory_model_with_dqn,
     [grid, current_config, chart, prod_chart, daily_infections_chart],

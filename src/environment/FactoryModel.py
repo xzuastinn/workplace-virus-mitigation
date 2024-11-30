@@ -146,7 +146,7 @@ class factory_model(Model):
         self.stats.update_infections(new_infections)  # Updates the infection count
 
         if self.current_step_in_day == self.steps_per_day - 1:
-            self.stats.process_day_end()  # Gets daily stats
+            self.stats.process_day_end()
 
         self.datacollector.collect(self)
         self.testing.current_productivity_impact = 0  # Resets the testing impact on productivity
