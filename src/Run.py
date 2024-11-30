@@ -39,7 +39,10 @@ def agent_portrayal(agent):
     """Defines how agents appear in the visualization."""
     portrayal = {"Shape": "circle", "Filled": "true", "r": 0.5}
 
-    if agent.health_status == "healthy":
+    if agent.is_quarantined:
+        portrayal["Color"] = "brown"  # Quarantined agents in yellow
+        portrayal["Layer"] = 5  
+    elif agent.health_status == "healthy":
         portrayal["Color"] = "green"
         portrayal["Layer"] = 1
     elif agent.health_status == "infected":
@@ -67,7 +70,8 @@ chart = ChartModule(
         {"Label": "Healthy", "Color": "Green"},
         {"Label": "Infected", "Color": "Red"},
         {"Label": "Recovered", "Color": "Blue"},
-        {"Label": "Death", "Color": "Black"}
+        {"Label": "Death", "Color": "Black"},
+        {"Label": "Quarantined", "Color": "Brown"}
     ]
 )
 
