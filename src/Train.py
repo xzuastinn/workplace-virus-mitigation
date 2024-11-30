@@ -204,11 +204,11 @@ def train_with_toggle(dqn_agent, num_episodes, max_steps_per_episode, visualize_
             productivity = step_results.get('productivity', 0)
             death = step_results.get('death', 0)
 
-            reward = -2 * infected - 100000 * death
+            reward = (-2 * infected) - (100 * death)  # Reduced penalty multipliers
             if productivity >= 0.6:
-                reward += 20 * productivity
+                reward += 2 * productivity
             if productivity < 0.6:
-                reward -= 100000 * (0.6 - productivity)
+                reward -= 100 * (0.6 - productivity)
 
             total_reward += reward
 
