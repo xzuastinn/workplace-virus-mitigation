@@ -111,14 +111,16 @@ class factory_model(Model):
             "Infected": lambda m: m.stats.count_health_status("infected"),
             "Recovered": lambda m: m.stats.count_health_status("recovered"),
             "Death": lambda m: m.stats.count_health_status("death"),
-            "Productivity": lambda m: (m.stats.calculate_productivity() * 
-                                     m.testing.get_productivity_modifier() * 
-                                     m.grid_manager.get_cleaning_productivity_modifier()),
-            #"Productivity": lambda m: m.get_shift_productivity_modifier(), #debugging
+            "Productivity": lambda m: m.stats.calculate_productivity(),
             "Quarantined": lambda m: len(m.quarantine.quarantine_zone),
             "Daily Infections": lambda m: m.stats.daily_infections,
             "Current Shift": lambda m: m.current_shift,
-            "Shifts Per Day": lambda m: m.shifts_per_day
+            "Shifts Per Day": lambda m: m.shifts_per_day,
+            "Cleaning Level": lambda m: {"light":0, "medium":1, "heavy":2}[m.initial_cleaning],
+            "Splitting Level": lambda m: m.splitting_level,
+            "Testing Level": lambda m: {"none":0, "light":1, "medium":2, "heavy":3}[m.test_lvl],
+            "Social Distancing": lambda m: int(m.social_distancing),
+            "Mask Mandate": lambda m: int(m.mask_mandate)
         })
 
     
