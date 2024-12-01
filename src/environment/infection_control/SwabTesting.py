@@ -122,13 +122,12 @@ class TestingManager:
             self.current_test_impact = self.testing_levels[testing_intensity]['productivity_impact']
 
             for agent in agents_to_test:
-                if not agent.is_dead:  # Add check for dead agents
+                if not agent.is_dead:
                     test_positive = self.test_agent(agent)
                     if test_positive:
                         self.model.quarantine.quarantine_agent(agent)
                     self.tests_performed += 1
         
-        # Always check impact duration and apply impact if needed
         if self.impact_duration_remaining > 0:
             self.apply_testing_impact()
             self.impact_duration_remaining -= 1

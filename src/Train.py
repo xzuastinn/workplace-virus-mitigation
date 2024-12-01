@@ -100,7 +100,7 @@ action_dim = len(actions)
 agent = DQNAgent(state_dim, action_dim)
 
 #TRAINING PARAMETERS 
-num_episodes = 50
+num_episodes = 1000
 max_steps_per_episode = 240 #10 Days
 
 def find_empty_cell(model, x_start=None, x_end=None):
