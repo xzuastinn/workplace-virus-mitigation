@@ -6,12 +6,12 @@ class FactoryConfig:
                  splitting_level=1,
                  testing_level='light',
                  social_distancing=False,
-                 mask_mandate=False,
+                 mask_mandate=2,
                  shifts_per_day=4,
                  steps_per_day=24,
                  width=25,
                  height=25,
-                 num_agents=60,
+                 num_agents=100,
                  visualization=False):
         
         self.cleaning_type = cleaning_type
@@ -47,6 +47,7 @@ class FactoryConfig:
         cleaning_map = ['light', 'medium', 'heavy']
         testing_map = ['none', 'light', 'medium', 'heavy']
         shifts_map = [1, 2, 3, 4]
+        mask_map = [0,1,2,3]
         
         if 'cleaning' in action_dict:
             self.cleaning_type = cleaning_map[action_dict['cleaning']]
@@ -57,7 +58,7 @@ class FactoryConfig:
         if 'social_distancing' in action_dict:
             self.social_distancing = bool(action_dict['social_distancing'])
         if 'mask_mandate' in action_dict:
-            self.mask_mandate = bool(action_dict['mask_mandate'])
+            self.mask_mandate = mask_map[action_dict['mask_mandate']]
         if 'shifts' in action_dict:
             self.shifts_per_day = shifts_map[action_dict['shifts']]
             self.steps_per_shift = self.steps_per_day // self.shifts_per_day

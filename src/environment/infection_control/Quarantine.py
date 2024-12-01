@@ -38,6 +38,8 @@ class QuarantineManager:
                 
     def quarantine_agent(self, agent):
         """Send a sick or false positive agent into quarentine."""
+        if agent.pos is None:
+            return
         if agent not in self.quarantine_zone:
             if agent.pos is not None:
                 agent.last_section = self.model.grid_manager.get_section_index(agent.pos[0]) #track the section they were in to be readded to
