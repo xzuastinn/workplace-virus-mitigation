@@ -34,7 +34,6 @@ class TestingManager:
             for level, config in self.testing_levels.items()
         }
         
-        self.current_productivity_impact = 0
 
     def set_testing_level(self, level):
         """
@@ -113,10 +112,12 @@ class TestingManager:
         self.last_test_step = current_step
 
         agents_to_test = self.get_agents_to_test(testing_intensity) #Agents to test by the proportion of tests conducted on population.
-        self.apply_productivity_impact(testing_intensity) #Applies the productivity impact on the environment during a testing step
+        impact = self.testing_levels[testing_intensity]['productivity_impact']
         print(f"Testing triggered: {testing_intensity} at step {current_step}")
 
         for agent in agents_to_test: #Runs the test and sends positive result agents to quarantine
+            agent.being_tested = True
+            agent.testing_impact = impact
             test_positive = self.test_agent(agent)
             if test_positive:
                 self.model.quarantine.quarantine_agent(agent)

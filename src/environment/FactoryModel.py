@@ -197,12 +197,10 @@ class factory_model(Model):
         """Calculates the new step results after each step."""
         base_productivity = self.stats.calculate_productivity()
         cleaning_modifier = self.grid_manager.get_cleaning_productivity_modifier()
-        testing_modifier = self.testing.get_productivity_modifier()
 
         final_productivity = (
             base_productivity * 
-            cleaning_modifier * 
-            testing_modifier
+            cleaning_modifier 
         )
 
         return {
@@ -215,7 +213,6 @@ class factory_model(Model):
             'base_production': base_productivity,
             'infection_penalty': -2.0 * (new_infections / self.num_agents),
             'cleaning_modifier': cleaning_modifier,
-            'testing_modifier': testing_modifier
         }
 
     

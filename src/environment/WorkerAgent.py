@@ -20,7 +20,8 @@ class worker_agent(Agent):
         self.base_position = None
         self.steps_since_base_change = 0
         self.is_dead = False
-        self.on_shift = True 
+        self.being_tested = False 
+        self.testing_impact = 0
 
     def get_section_bounds(self):
         """Get the boundaries of the agent's assigned section"""
@@ -267,6 +268,11 @@ class worker_agent(Agent):
             production *= 0.95 #mask mandate reduces production by 5%
         if self.model.social_distancing:
             production *= 0.90  #social distancing reduces production by 10%
+
+        if self.being_tested:
+            production *= (1 - self.testing_impact)
+            self.being_tested = False
+            self.testing_productivity_impact = 0
 
         if self.is_quarantined:
             production = 0 #agent in quarantine has 0 production
