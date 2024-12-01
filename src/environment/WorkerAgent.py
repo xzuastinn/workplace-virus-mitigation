@@ -13,14 +13,17 @@ class worker_agent(Agent):
         self.recovery_time = 0 #tracks how long an agent is in recovery for
         self.had_covid = False
         self.is_quarantined = False
-        self.base_production = 1 
-        self.on_shift = False
+        self.base_production = 1
         self.current_production = self.base_production
         self.confined_to_2x2 = False
         self.confined_steps = 0
         self.base_position = None
         self.steps_since_base_change = 0
         self.is_dead = False
+        self.being_tested = False 
+        self.testing_impact = 0
+        self.being_cleaned = False
+        self.cleaning_productivity_impact = 0
 
     def get_section_bounds(self):
         """Get the boundaries of the agent's assigned section"""
@@ -114,7 +117,7 @@ class worker_agent(Agent):
 
     def move(self):
         """Move the agent to a random valid position on the grid."""
-        if self.is_quarantined or self.is_dead or self.on_shift == False: #dont need to move quarantined or dead agents
+        if self.is_quarantined or self.is_dead:
             return
 
         if self.base_position is None:
@@ -126,41 +129,55 @@ class worker_agent(Agent):
             self.update_base_position()
             return
 
-        if self.model.social_distancing: #handles social_distancing based on shift changes so that agents start atleast 1 block away
+        if self.model.social_distancing:
             valid_positions = []
             check_positions = self.get_valid_positions()
-            MINIMUM_DISTANCE = 2
+            MINIMUM_DISTANCE = 2  # Explicitly define minimum distance for social distancing
             
-            for pos in check_positions: #Calculates new valid poisitons based on whether or not social distancing is being adhered to
+            for pos in check_positions:
                 is_valid = True
-                for neighbor_pos in self.model.grid.iter_neighborhood(
-                    pos, moore=True, radius=MINIMUM_DISTANCE
-                ):
-                    if (0 <= neighbor_pos[0] < self.model.grid.width and 
-                        0 <= neighbor_pos[1] < self.model.grid.height):
-                        cell_contents = self.model.grid.get_cell_list_contents([neighbor_pos])
-                        if any(isinstance(a, type(self)) for a in cell_contents):
-                            is_valid = False
-                            break
+                # Check all positions within the minimum distance
+                for dx in range(-MINIMUM_DISTANCE, MINIMUM_DISTANCE + 1):
+                    for dy in range(-MINIMUM_DISTANCE, MINIMUM_DISTANCE + 1):
+                        if dx == 0 and dy == 0:
+                            continue
+                        
+                        neighbor_pos = (pos[0] + dx, pos[1] + dy)
+                        if (0 <= neighbor_pos[0] < self.model.grid.width and 
+                            0 <= neighbor_pos[1] < self.model.grid.height):
+                            
+                            manhattan_distance = abs(dx) + abs(dy)
+                            if manhattan_distance < MINIMUM_DISTANCE:
+                                cell_contents = self.model.grid.get_cell_list_contents([neighbor_pos])
+                                if any(isinstance(a, type(self)) for a in cell_contents):
+                                    is_valid = False
+                                    break
+                    
+                    if not is_valid:
+                        break
                 
                 if is_valid:
                     valid_positions.append(pos)
             
             if not valid_positions:
+                # If no position maintains social distance, find position with fewest neighbors
                 min_neighbors = float('inf')
                 best_positions = []
                 
-                for pos in check_positions: #if no valid_positions are found while adhereing to SD, choose the position with least neighbors.
-                    neighbor_count = sum(
-                        1 for neighbor_pos in self.model.grid.iter_neighborhood(
-                            pos, moore=True, radius=MINIMUM_DISTANCE
-                        )
-                        if (0 <= neighbor_pos[0] < self.model.grid.width and 
-                            0 <= neighbor_pos[1] < self.model.grid.height and
-                            any(isinstance(a, type(self)) 
-                                for a in self.model.grid.get_cell_list_contents([neighbor_pos]))
-                        )
-                    )
+                for pos in check_positions:
+                    neighbor_count = 0
+                    for dx in range(-MINIMUM_DISTANCE, MINIMUM_DISTANCE + 1):
+                        for dy in range(-MINIMUM_DISTANCE, MINIMUM_DISTANCE + 1):
+                            if dx == 0 and dy == 0:
+                                continue
+                            
+                            neighbor_pos = (pos[0] + dx, pos[1] + dy)
+                            if (0 <= neighbor_pos[0] < self.model.grid.width and 
+                                0 <= neighbor_pos[1] < self.model.grid.height):
+                                
+                                cell_contents = self.model.grid.get_cell_list_contents([neighbor_pos])
+                                if any(isinstance(a, type(self)) for a in cell_contents):
+                                    neighbor_count += 1
                     
                     if neighbor_count < min_neighbors:
                         min_neighbors = neighbor_count
@@ -175,7 +192,6 @@ class worker_agent(Agent):
         if valid_positions:
             new_position = random.choice(valid_positions)
             self.model.grid.move_agent(self, new_position)
-
 
     def get_infection_probability(self, distance, had_covid):
         """Calculate infection probability based on distance and immunity status."""
@@ -195,16 +211,10 @@ class worker_agent(Agent):
         section_prob = self.model.grid_manager.get_infection_probability(section_index)
         if had_covid:
             base_prob *= .5 
+        if self.model.mask_mandate:
+            base_prob *= 0.7  # Masks reduce transmission by 30%
         if self.model.social_distancing:
             base_prob *= 0.8  # Social distancing reduces transmission by 20%
-        
-        mask_mandate_impacts = {
-            0: 1.0,   # No masks
-            1: 0.85,  # Partial mask mandate
-            2: 0.7,   # Moderate mask mandate
-            3: 0.5    # Strict mask mandate
-        }
-        base_prob *= mask_mandate_impacts.get(self.model.mask_mandate, 1.0)
             
         return base_prob * section_prob
     
@@ -213,21 +223,17 @@ class worker_agent(Agent):
         if self.health_status == "infected":
             self.infection_time += 1
             self.had_covid = True
-
-            if self.infection_time == 1:
-                death_rate = 0.000613
-                if random.random() < death_rate:
-                    self.is_dead = True
-                    self.health_status = "death"
-
-            if self.infection_time > 48: #40 steps of illness to recover
+            if self.infection_time > 40: #40 steps of illness to recover
                 self.health_status = "recovered"
         elif self.health_status == "recovered":
             self.infection_time += 1
             if self.infection_time > 80: #80 steps to go back to healthy.
                 self.health_status = "healthy"
                 self.infection_time = 0
-
+        elif self.health_status == "death":
+            death_rate = 0.000613
+            if random.random() < death_rate:
+                self.is_dead = True
 
     def update_production(self):
         """Update agent's current production based on various factors."""
@@ -238,44 +244,45 @@ class worker_agent(Agent):
         elif self.health_status == "infected":
             production *= 0.2 #20% production for sick agents.
         elif self.health_status == "recovered":
-            production *= 0.90 #90% production for recovered
+            production *= 0.95 #95% production for recovered
         elif self.health_status == "death":
             production *= 0
             self.current_production = 0
             return
         
         shift_penalty = {
-            1: 0.6,   # One shift - 40% penalty
-            2: 0.8,   # Two shifts - 20% reduction
-            3: 0.9,   # Three shifts - 10% reduction
+            1: 0.8,   # One shift - 20% penalty
+            2: 0.9,   # Two shifts - 10% reduction
+            3: 0.95,   # Three shifts - 5% reduction
             4: 1.0    # Four shifts - no reduction
         }.get(self.model.shifts_per_day, 1.0)
         production *= shift_penalty
         
         splitting_level_penalties = {
             0: 1.0,   # No penalty for full grid
-            1: 0.90,  # 10% penalty for half grid
-            2: 0.80,  # 20% penalty for quarter grid
-            3: 0.65   # 35% penalty for eighth grid
+            1: 0.95,  # 5% penalty for half grid
+            2: 0.90,  # 10% penalty for quarter grid
+            3: 0.8   # 20% penalty for eighth grid
         }
         production *= splitting_level_penalties.get(self.model.splitting_level, 1.0)
 
-        mask_mandate_productivity_impacts = {
-            0: 1.0,   # No masks
-            1: 0.95,  # Partial mask mandate
-            2: 0.90,  # Moderate mask mandate
-            3: 0.85   # Strict mask mandate
-        }
-        production *= mask_mandate_productivity_impacts.get(self.model.mask_mandate, 1.0)
-   
+        if self.model.mask_mandate:
+            production *= 0.95 #mask mandate reduces production by 5%
         if self.model.social_distancing:
             production *= 0.90  #social distancing reduces production by 10%
 
+        if self.being_tested:
+            production *= (1 - self.testing_impact)
+            self.being_tested = False
+            self.testing_productivity_impact = 0
+        
+        if self.being_cleaned:
+            production *= (1 - self.cleaning_productivity_impact)
+            self.being_cleaned = False
+            self.cleaning_productivity_impact = 0
+
         if self.is_quarantined:
             production = 0 #agent in quarantine has 0 production
-
-        if self.on_shift == False:
-            production = 0
 
         self.current_production = production
 
@@ -316,6 +323,7 @@ class worker_agent(Agent):
                                         agent.health_status = "infected"
                                         agent.had_covid = True
                                         self.model.grid_manager.update_infection_level(target_section, 1)
+    
     def introduce_infection(self):
         infected_agent = [agent for agent in self.model.schedule.agents if agent.health_status == "infected"]
 
@@ -327,15 +335,13 @@ class worker_agent(Agent):
     def step(self):
         """Define agent's behavior per step."""
         if self.is_dead:
-            if self.pos is not None:
-                self.model.grid.remove_agent(self)
-                return
+            self.model.grid.remove_agent(self)
+            return
 
         if not self.is_quarantined:
             self.move() #moves agent
             self.infection() #spreads disease
         self.update_infection() #progresses disease
-        self.update_production() #updates agent production output
-
+        self.update_production() #updates agent production output.
         if self.model.schedule.steps % 50 == 0:
             self.introduce_infection()

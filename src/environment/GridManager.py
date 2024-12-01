@@ -10,23 +10,23 @@ class GridManager:
             'light': {
                 'frequency': 8, 
                 'infection_reduction': 0.35, 
-                'duration': 1,
-                'production_reduction': 0.00
+                'duration': 4,
+                'production_reduction': 0.05
             },
             'medium': {
                 'frequency': 16, 
                 'infection_reduction': 0.65, 
-                'duration': 2,
-                'production_reduction': 0.15  # 15% production reduction
+                'duration': 6,
+                'production_reduction': 0.10
             },
             'heavy': {
                 'frequency': 16, 
                 'infection_reduction': 0.8, 
-                'duration': 2,
-                'production_reduction': 0.25  # 25% production reduction
+                'duration': 6,
+                'production_reduction': 0.15
             }
         }
-        self.current_cleaning = self.model.initial_cleaning #initializes cleaning schedule
+        self.current_cleaning = self.model.initial_cleaning
         self.cleaning_steps_remaining = 0
         self.next_cleaning = { #dictionary for step intervals
             'light': 8,
@@ -35,7 +35,8 @@ class GridManager:
         }
         self.update_section_boundaries()
         self.section_infection_levels = [0] * (2 ** self._splitting_level if self._splitting_level > 0 else 1)
-        
+        self.sections_being_cleaned = set()
+
     def update_section_boundaries(self):
         """Creates the section boundaries based on the current splitting level"""
         self.section_boundaries = []
@@ -103,27 +104,20 @@ class GridManager:
         """Function to manage how a shift change is ran."""
         self.model.current_shift = (self.model.current_shift + 1) % self.model.shifts_per_day
 
-        active_agents = [agent for agent in self.model.active_agents if not agent.is_quarantined]
-        inactive_agents = [agent for agent in self.model.inactive_agents 
-                           if not agent.is_quarantined]
+        active_agents = [agent for agent in self.model.schedule.agents if not agent.is_quarantined]
+        occupied_positions = []
 
-        for agent in active_agents[:]:
-            if agent.pos is not None:
-                self.model.grid.remove_agent(agent)
-            agent.on_shift = False
-            agent.pos = None
-            self.model.active_agents.remove(agent)
-            self.model.inactive_agents.append(agent)
+        self.model.random.shuffle(active_agents)
 
-        occupied_positions = set()
-        for agent in inactive_agents[:]:
-            current_section_index = self.get_section_index(agent.unique_id)
+        for agent in active_agents:
+            current_section_index = self.get_section_index(agent.pos[0])
+            
             section_width = self.model.grid.width // (2 ** self._splitting_level if self._splitting_level > 0 else 1)
             section_start = current_section_index * section_width
             section_end = section_start + section_width
 
             attempts = 0
-            max_attempts = 20
+            max_attempts = 100
             placed = False
 
             while attempts < max_attempts and not placed:
@@ -131,27 +125,49 @@ class GridManager:
                 new_y = self.model.random.randrange(self.model.grid.height)
                 new_pos = (new_x, new_y)
 
-                if new_pos not in occupied_positions:
-                    self.model.grid.place_agent(agent, new_pos)
-                    agent.set_base_position(new_pos)
-                    agent.steps_since_base_change = 0
-                    agent.on_shift = True
-                    occupied_positions.add(new_pos)
-                    agent.section = f'section_{current_section_index}'
-                    agent.last_section = current_section_index
+                is_valid = True
+                if self.model.social_distancing:
+                    for occupied_pos in occupied_positions:
+                        manhattan_distance = abs(new_x - occupied_pos[0]) + abs(new_y - occupied_pos[1])
+                        if manhattan_distance < 2:  #Enforce 2-cell MH minimum distance
+                            is_valid = False
+                            break
 
-                    self.model.inactive_agents.remove(agent)
-                    self.model.active_agents.append(agent)
-
-                    placed = True
+                if is_valid and new_pos not in occupied_positions:
+                    if new_pos != agent.pos:
+                        self.model.grid.move_agent(agent, new_pos)
+                        agent.set_base_position(new_pos)
+                        agent.steps_since_base_change = 0
+                        occupied_positions.append(new_pos)
+                        agent.section = f'section_{current_section_index}'
+                        agent.last_section = current_section_index
+                        placed = True
+                    break
                 attempts += 1
 
             if not placed:
-                self.model.schedule.remove(agent)
-                self.model.inactive_agents.remove(agent)
+                attempts = 0
+                while attempts < max_attempts and not placed:
+                    new_x = self.model.random.randrange(section_start, section_end)
+                    new_y = self.model.random.randrange(self.model.grid.height)
+                    new_pos = (new_x, new_y)
+                    
+                    if new_pos not in occupied_positions:
+                        self.model.grid.move_agent(agent, new_pos)
+                        agent.set_base_position(new_pos)
+                        agent.steps_since_base_change = 0
+                        occupied_positions.append(new_pos)
+                        agent.section = f'section_{current_section_index}'
+                        agent.last_section = current_section_index
+                        placed = True
+                    attempts += 1
+
+                if not placed:
+                    self.model.grid.remove_agent(agent)
+                    self.model.schedule.remove(agent)
 
         self.model.next_shift_change = ((self.model.current_step_in_day + self.model.steps_per_shift) % self.model.steps_per_day)
-        
+            
     def redistribute_agents(self):
         """redistributes agents to new sections when an update for section is called"""
         for agent in self.model.schedule.agents:
@@ -183,6 +199,8 @@ class GridManager:
         if self.cleaning_steps_remaining > 0:
             self.apply_cleaning_effects()
             self.cleaning_steps_remaining -= 1
+            if self.cleaning_steps_remaining == 0:
+                self.sections_being_cleaned.clear()
             return
 
         cleaning_type = self.current_cleaning
@@ -198,6 +216,9 @@ class GridManager:
         """Start a new cleaning cycle"""
         self.current_cleaning = cleaning_type
         self.cleaning_steps_remaining = self.cleaning_schedule[cleaning_type]['duration']
+
+        num_sections = 2 ** self._splitting_level if self._splitting_level > 0 else 1
+        self.sections_being_cleaned = set(range(num_sections))
         self.apply_cleaning_effects()
 
     def apply_cleaning_effects(self):
@@ -209,19 +230,21 @@ class GridManager:
         
         reduction = schedule['infection_reduction']
         for i in range(len(self.section_infection_levels)):
-            self.section_infection_levels[i] *= (1 - reduction)
+            if i in self.sections_being_cleaned:
+                self.section_infection_levels[i] *= (1 - reduction)
+
+        for agent in self.model.schedule.agents:
+            if not agent.is_quarantined and not agent.is_dead:
+                section_index = self.get_section_index(agent.pos[0])
+                if section_index in self.sections_being_cleaned:
+                    agent.being_cleaned = True
+                    agent.cleaning_productivity_impact = schedule['production_reduction']      
 
     def set_cleaning_type(self, cleaning_type):
         """Change the cleaning type"""
         if cleaning_type in self.cleaning_schedule:
             self.current_cleaning = cleaning_type
             self.cleaning_steps_remaining = 0
-    
-    def get_cleaning_productivity_modifier(self):
-        """Calculate productivity modifier based on current cleaning status"""
-        if self.cleaning_steps_remaining > 0 and self.current_cleaning:
-            return 1 - self.cleaning_schedule[self.current_cleaning]['production_reduction']
-        return 1.0
     
     @property
     def splitting_level(self):

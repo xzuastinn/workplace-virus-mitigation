@@ -6,34 +6,46 @@ class TestingManager:
         self.false_negative_rate = 0.14
         self.tests_performed = 0
         self.last_test_step = -1
+        self.impact_duration_remaining = 0  # Track remaining impact steps
+        self.current_test_impact = 0  
+        
         
         self.testing_levels = { #Parameter dictionary for testing level. PRoportion is how many agents to test out of total pop
+            'none': {
+                'enabled': True,  # Default state
+                'proportion': 0,
+                'productivity_impact': 0,
+                'frequency': 0,
+                'impact_duration': 0
+            },
             'light': {
                 'enabled': False,
-                'proportion': 0,
-                'productivity_impact': 0, #How much of an impact this testing schedule has on productivity
-                'frequency': 8 #How frequent the test schedule is ran
+                'proportion': 0.2,
+                'productivity_impact': 0.15, #How much of an impact this testing schedule has on productivity
+                'frequency': 8, #How frequent the test schedule is ran
+                'impact_duration': 4
             },
             'medium': {
                 'enabled': False,
-                'proportion': 0.5,
-                'productivity_impact': 0.10,
-                'frequency': 16
+                'proportion': 0.4,
+                'productivity_impact': 0.25,
+                'frequency': 10,
+                'impact_duration': 8
             },
             'heavy': {
                 'enabled': False,
-                'proportion': 0.1,
-                'productivity_impact': 0.20,
-                'frequency': 24
+                'proportion': 0.65,
+                'productivity_impact': 0.40,
+                'frequency': 14,
+                'impact_duration': 10
             }
         }
         
         self.next_test_steps = {
-            level: config['frequency'] 
+            level: 0
             for level, config in self.testing_levels.items()
         }
         
-        self.current_productivity_impact = 0
 
     def set_testing_level(self, level):
         """
@@ -76,12 +88,6 @@ class TestingManager:
         """
         self.current_productivity_impact = self.testing_levels[testing_intensity]['productivity_impact']
         
-    def get_productivity_modifier(self):
-        """
-        Return the current productivity modifier from testing
-        """
-        return 1 - self.current_productivity_impact
-        
 
     def should_run_testing(self, testing_type):
         """Helper method to compare the current step to when the next_test_step to determine if tests should be ran"""
@@ -95,28 +101,34 @@ class TestingManager:
             ) % self.model.steps_per_day #Resets next_test_steps to the next testing day
             return True #Test this step
         return False #Dont test this step
-        
+    
+    def apply_testing_impact(self):
+        """Apply the stored testing impact to all non-quarantined agents"""
+        for agent in self.model.schedule.agents:
+            if not agent.is_quarantined and not agent.is_dead:
+                agent.being_tested = True
+                agent.testing_impact = self.current_test_impact 
+   
     def process_testing(self, testing_intensity):
-        """
-        Process testing for selected agents based on testing intensity.
-        Quarantine agents who test positive.
-        """
         if not self.testing_levels[testing_intensity]['enabled']:
             return
                 
-        current_step = self.model.current_step
+        if self.should_run_testing(testing_intensity):
+            print(f"Testing triggered: {testing_intensity} at step {self.model.current_step}")
+            agents_to_test = self.get_agents_to_test(testing_intensity)
+            
+            self.last_test_step = self.model.current_step
+            self.impact_duration_remaining = max(0, self.testing_levels[testing_intensity]['impact_duration'])
+            self.current_test_impact = self.testing_levels[testing_intensity]['productivity_impact']
+
+            for agent in agents_to_test:
+                if not agent.is_dead:
+                    test_positive = self.test_agent(agent)
+                    if test_positive:
+                        self.model.quarantine.quarantine_agent(agent)
+                    self.tests_performed += 1
         
-        if current_step == self.last_test_step:
-            return
-                
-        self.last_test_step = current_step
+        if self.impact_duration_remaining > 0:
+            self.apply_testing_impact()
+            self.impact_duration_remaining -= 1
 
-        agents_to_test = self.get_agents_to_test(testing_intensity) #Agents to test by the proportion of tests conducted on population.
-        self.apply_productivity_impact(testing_intensity) #Applies the productivity impact on the environment during a testing step
-        print(f"Testing triggered: {testing_intensity} at step {current_step}")
-
-        for agent in agents_to_test: #Runs the test and sends positive result agents to quarantine
-            test_positive = self.test_agent(agent)
-            if test_positive:
-                self.model.quarantine.quarantine_agent(agent)
-            self.tests_performed += 1
