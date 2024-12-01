@@ -164,9 +164,7 @@ class factory_model(Model):
     def process_scheduled_events(self):
         """Process all scheduled events in the correct order"""
         self.grid_manager.process_cleaning(self.current_step_in_day) #Call to process cleaning if correct day
-        for testing_type in ['light', 'medium', 'heavy']: 
-            if self.testing.should_run_testing(testing_type):
-                self.testing.process_testing(testing_type) #If its a testing step, call the processing testing method in testing class
+        self.testing.process_testing(self.test_lvl)#If its a testing step, call the processing testing method in testing class
             
         self.quarantine.process_quarantine() #If an agent tests positive for the infection, throw them in quarantine, if they are ready to be taken out do that.
         

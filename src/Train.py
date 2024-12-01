@@ -100,7 +100,7 @@ action_dim = len(actions)
 agent = DQNAgent(state_dim, action_dim)
 
 #TRAINING PARAMETERS 
-num_episodes = 500
+num_episodes = 50
 max_steps_per_episode = 240 #10 Days
 
 def find_empty_cell(model, x_start=None, x_end=None):
@@ -204,7 +204,7 @@ def train_with_toggle(dqn_agent, num_episodes, max_steps_per_episode, visualize_
             productivity = step_results.get('productivity', 0)
             death = step_results.get('death', 0)
 
-            reward = (-2 * infected) - (100 * death)  #Reduced penalty multipliers
+            reward = (-20 * infected) - (100 * death)  #Reduced penalty multipliers
             if productivity >= 0.75:
                 reward += 8 * productivity
             elif productivity >= 0.6:

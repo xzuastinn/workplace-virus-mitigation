@@ -10,20 +10,20 @@ class GridManager:
             'light': {
                 'frequency': 8, 
                 'infection_reduction': 0.35, 
-                'duration': 1,
+                'duration': 4,
                 'production_reduction': 0.05
             },
             'medium': {
                 'frequency': 16, 
                 'infection_reduction': 0.65, 
-                'duration': 2,
-                'production_reduction': 0.15
+                'duration': 6,
+                'production_reduction': 0.10
             },
             'heavy': {
                 'frequency': 16, 
                 'infection_reduction': 0.8, 
-                'duration': 2,
-                'production_reduction': 0.25
+                'duration': 6,
+                'production_reduction': 0.15
             }
         }
         self.current_cleaning = self.model.initial_cleaning
