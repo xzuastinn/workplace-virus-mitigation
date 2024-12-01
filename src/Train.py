@@ -99,9 +99,9 @@ state_dim = 8
 action_dim = len(actions)
 agent = DQNAgent(state_dim, action_dim)
 
-#TRAINING PARAMETERS
-num_episodes = 5000
-max_steps_per_episode = 200
+#TRAINING PARAMETERS 
+num_episodes = 500
+max_steps_per_episode = 240 #10 Days
 
 def find_empty_cell(model, x_start=None, x_end=None):
     """HELPER FUNCTION. Find an empty cell in the grid within the given x bounds"""
@@ -206,7 +206,7 @@ def train_with_toggle(dqn_agent, num_episodes, max_steps_per_episode, visualize_
 
             reward = (-2 * infected) - (100 * death)  #Reduced penalty multipliers
             if productivity >= 0.75:
-                reward += 4 * productivity
+                reward += 8 * productivity
             elif productivity >= 0.6:
                 reward += 2 * productivity
             elif productivity < 0.6:

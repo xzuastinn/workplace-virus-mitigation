@@ -149,7 +149,6 @@ class factory_model(Model):
             self.stats.process_day_end()
 
         self.datacollector.collect(self)
-        self.testing.current_productivity_impact = 0  # Resets the testing impact on productivity
 
         # Return results for training and visualization
         return self._get_step_results(new_infections, post_step_infected)

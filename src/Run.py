@@ -15,18 +15,9 @@ mask_mandate_options = [False, True]
 shifts_options = [1, 2, 3, 4]  # maps to 1, 2, 3, or 4 shifts per day
 
 class CurrentConfig(TextElement):
-    """Display current configuration as text"""
-    
     def render(self, model):
-        return f"""
-        <b>Current Configuration:</b><br>
-        Cleaning Type: {model.initial_cleaning}<br>
-        Splitting Level: {model.splitting_level}<br>
-        Testing Level: {model.test_lvl}<br>
-        Social Distancing: {model.social_distancing}<br>
-        Mask Mandate: {model.mask_mandate}<br>
-        Shifts Per Day: {model.shifts_per_day}
-        """
+        return f"Configs: CleaningLVL={model.initial_cleaning}, Split={model.splitting_level}, TestLVL={model.test_lvl}, SocialDistance={model.social_distancing}, Masking={model.mask_mandate}, Shifts/day={model.shifts_per_day}"
+
     
 #ACTION DICTIONARY
 actions = [
@@ -81,6 +72,8 @@ GRID_WIDTH = 50
 GRID_HEIGHT = 25
 CANVAS_WIDTH = 500
 CANVAS_HEIGHT = 250
+chart_height = 150
+chart_width = 450
 
 grid = CanvasGrid(agent_portrayal, GRID_WIDTH, GRID_HEIGHT, CANVAS_WIDTH, CANVAS_HEIGHT)
 current_config = CurrentConfig()
@@ -92,16 +85,16 @@ chart = ChartModule(
         {"Label": "Recovered", "Color": "Blue"},
         {"Label": "Death", "Color": "Black"},
         {"Label": "Quarantined", "Color": "Brown"}
-    ]
+    ], canvas_height=chart_height, canvas_width=chart_width
 )
 
 prod_chart = ChartModule([
     {"Label": "Productivity", "Color": "Purple"},
-], data_collector_name='datacollector')
+], data_collector_name='datacollector', canvas_height=chart_height, canvas_width=chart_width)
 
 daily_infections_chart = ChartModule([
     {"Label": "Daily Infections", "Color": "Red"}
-], data_collector_name='datacollector')
+], data_collector_name='datacollector', canvas_height=chart_height, canvas_width=chart_width)
 
 #NOT USED?
 viz_config = FactoryConfig(
