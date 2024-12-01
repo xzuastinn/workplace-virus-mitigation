@@ -11,6 +11,13 @@ class TestingManager:
         
         
         self.testing_levels = { #Parameter dictionary for testing level. PRoportion is how many agents to test out of total pop
+            'none': {
+                'enabled': True,  # Default state
+                'proportion': 0,
+                'productivity_impact': 0,
+                'frequency': 0,
+                'impact_duration': 0
+            },
             'light': {
                 'enabled': False,
                 'proportion': 0.2,
