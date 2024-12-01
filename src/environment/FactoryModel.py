@@ -196,11 +196,9 @@ class factory_model(Model):
     def _get_step_results(self, new_infections, total_infected):
         """Calculates the new step results after each step."""
         base_productivity = self.stats.calculate_productivity()
-        cleaning_modifier = self.grid_manager.get_cleaning_productivity_modifier()
 
         final_productivity = (
-            base_productivity * 
-            cleaning_modifier 
+            base_productivity
         )
 
         return {
@@ -212,7 +210,6 @@ class factory_model(Model):
             'quarantined': len(self.quarantine.quarantine_zone),
             'base_production': base_productivity,
             'infection_penalty': -2.0 * (new_infections / self.num_agents),
-            'cleaning_modifier': cleaning_modifier,
         }
 
     

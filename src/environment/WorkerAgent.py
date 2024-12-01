@@ -22,6 +22,8 @@ class worker_agent(Agent):
         self.is_dead = False
         self.being_tested = False 
         self.testing_impact = 0
+        self.being_cleaned = False
+        self.cleaning_productivity_impact = 0
 
     def get_section_bounds(self):
         """Get the boundaries of the agent's assigned section"""
@@ -273,6 +275,11 @@ class worker_agent(Agent):
             production *= (1 - self.testing_impact)
             self.being_tested = False
             self.testing_productivity_impact = 0
+        
+        if self.being_cleaned:
+            production *= (1 - self.cleaning_productivity_impact)
+            self.being_cleaned = False
+            self.cleaning_productivity_impact = 0
 
         if self.is_quarantined:
             production = 0 #agent in quarantine has 0 production
