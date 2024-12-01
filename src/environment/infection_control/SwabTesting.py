@@ -17,13 +17,13 @@ class TestingManager:
             },
             'medium': {
                 'enabled': False,
-                'proportion': 0.5,
+                'proportion': 0.4,
                 'productivity_impact': 0.25,
                 'frequency': 16
             },
             'heavy': {
                 'enabled': False,
-                'proportion': 0.8,
+                'proportion': 0.65,
                 'productivity_impact': 0.40,
                 'frequency': 20
             }
@@ -75,12 +75,6 @@ class TestingManager:
         Apply productivity impact based on testing intensity
         """
         self.current_productivity_impact = self.testing_levels[testing_intensity]['productivity_impact']
-        
-    def get_productivity_modifier(self):
-        """
-        Return the current productivity modifier from testing
-        """
-        return 1 - self.current_productivity_impact
         
 
     def should_run_testing(self, testing_type):
