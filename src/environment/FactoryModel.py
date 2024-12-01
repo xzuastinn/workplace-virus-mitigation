@@ -29,7 +29,6 @@ class factory_model(Model):
             )
         # Base model parameters
         self.num_agents = config.num_agents
-        self.half_agents = self.num_agents // 2
         self.grid = MultiGrid(config.width, config.height, torus=True)
         self.schedule = RandomActivation(self)
         self.visualization = config.visualization
@@ -59,11 +58,7 @@ class factory_model(Model):
         self.current_step_in_day = 0
         self.current_day = 0
         self.current_shift = 0 
-
-        self.active_agents = []
-        self.inactive_agents = []
-        #print("InitConfig Social Distancing:", config.social_distancing)
-        #print("InitConfigMask Mandate:", config.mask_mandate)
+            
         self.initialize_agents()
         self.initialize_datacollector()
 
@@ -71,10 +66,9 @@ class factory_model(Model):
         self.swab_testing_counter = {"none": 0, "light": 0, "medium": 0, "heavy": 0} # done
         self.cleaning_counter = {"light": 0, "medium": 0, "heavy": 0}
         self.shifts_counter = {"1": 0, "2": 0, "3": 0, "4": 0}
-        self.mask_counter = {"0": 0, "1": 0, "2": 0, "3": 0}
-        self.social_distancing_counter = 0 # done
+        self.mask_counter = {True: 0, False: 0}
+        self.social_distancing_counter = {True: 0, False: 0}
         self.splitting_level_counter = {"0": 0, "1": 0, "2": 0, "3": 0}
-
 
     def get_state(self):
         """Extracts the current state of the environment for the RL agent."""
@@ -86,46 +80,29 @@ class factory_model(Model):
             self.stats.calculate_productivity(),
             self.current_step_in_day,
             int(self.social_distancing),
-            self.mask_mandate,
+            int(self.mask_mandate),
         ]
-    
-    def initialize_agents(self):
-        """Places agents in the grid and assigns them to sections. 
-        Half of agents start as inactive. Two agents in each group start infected."""
-        infected_active = 0
-        infected_inactive = 0
         
-        positions = self.grid_manager.get_random_positions(self.half_agents)
+    def initialize_agents(self):
+        """Places agents in the grid and assigning them to sections. Starts the infection with a single 
+        infected agent."""
+        first_infection = random.randrange(self.num_agents)
+        positions = self.grid_manager.get_random_positions(self.num_agents)
         num_sections = 2 ** self.grid_manager.splitting_level if self.grid_manager.splitting_level > 0 else 1
 
         for i in range(self.num_agents):
-            section_index = i // (self.num_agents // num_sections)
+            section_index = positions[i][0] // (self.grid.width // num_sections)
             section = f'section_{section_index}'
             worker = worker_agent(i, self, section)
 
-            # Infect 2 agents in active group
-            if i < self.half_agents and infected_active < 2:
+            if i == first_infection:
                 worker.health_status = "infected"
-                infected_active += 1
 
-            # Infect 2 agents in inactive group
-            if i >= self.half_agents and infected_inactive < 2:
-                worker.health_status = "infected"
-                infected_inactive += 1
-
-            if i < self.half_agents:
-                self.schedule.add(worker)
-                pos = positions[i]
-                self.grid.place_agent(worker, pos)
-                worker.set_base_position(pos)
-                worker.last_section = section_index
-                worker.on_shift = True
-                self.active_agents.append(worker)
-            else:
-                print('here')
-                worker.on_shift = False
-                self.inactive_agents.append(worker)
-                self.schedule.add(worker)
+            self.schedule.add(worker)
+            pos = positions[i]
+            self.grid.place_agent(worker, pos)
+            worker.set_base_position(pos)
+            worker.last_section = section_index
     
     def initialize_datacollector(self):
         """Collects different data to be used to track performance of the model."""
@@ -134,20 +111,16 @@ class factory_model(Model):
             "Infected": lambda m: m.stats.count_health_status("infected"),
             "Recovered": lambda m: m.stats.count_health_status("recovered"),
             "Death": lambda m: m.stats.count_health_status("death"),
-            "Productivity": lambda m: (m.stats.calculate_productivity() * 
-                                     m.testing.get_productivity_modifier() * 
-                                     m.grid_manager.get_cleaning_productivity_modifier()),
-            #"Productivity": lambda m: m.get_shift_productivity_modifier(), #debugging
+            "Productivity": lambda m: m.stats.calculate_productivity(),
             "Quarantined": lambda m: len(m.quarantine.quarantine_zone),
             "Daily Infections": lambda m: m.stats.daily_infections,
             "Current Shift": lambda m: m.current_shift,
             "Shifts Per Day": lambda m: m.shifts_per_day,
-            "Swab Testing Counter": lambda m: m.swab_testing_counter,
-            "Cleaning Counter": lambda m: m.cleaning_counter,
-            "Shifts Counter": lambda m: m.shifts_counter,
-            "Mask Counter": lambda m: m.mask_counter,
-            "Social Distancing Counter": lambda m: m.social_distancing_counter,
-            "Splitting Level Counter": lambda m: m.splitting_level_counter,
+            "Cleaning Level": lambda m: {"light":0, "medium":1, "heavy":2}[m.initial_cleaning],
+            "Splitting Level": lambda m: m.splitting_level,
+            "Testing Level": lambda m: {"none":0, "light":1, "medium":2, "heavy":3}[m.test_lvl],
+            "Social Distancing": lambda m: int(m.social_distancing),
+            "Mask Mandate": lambda m: int(m.mask_mandate)
         })
 
     
@@ -158,15 +131,11 @@ class factory_model(Model):
     def step(self, action=None):
         """Processes a single step in the model."""
         self.current_step += 1
-        self.current_step_in_day = self.current_step % self.steps_per_day
+        self.current_step_in_day = self.current_step % self.steps_per_day 
+
         if self.current_step_in_day == 0:
             self.current_day += 1
-        #print(f'Mask_mandate level {self.mask_mandate}')
-        #print(f'Social Distancing {self.social_distancing}' )
-        #print(f'Splitting lvl {self.splitting_level}')
-        #print(f'testing lvl {self.test_lvl}')
-        #print(f'shifts per day {self.shifts_per_day}')
-        #print(f'cleaning {self.initial_cleaning}')
+
         self.process_scheduled_events()  # Runs all scheduled events for the current step
 
         pre_step_infected = self.stats.count_health_status("infected")
@@ -175,33 +144,28 @@ class factory_model(Model):
 
         new_infections = max(0, post_step_infected - pre_step_infected)
         self.stats.update_infections(new_infections)  # Updates the infection count
-        
+
         if self.current_step_in_day == self.steps_per_day - 1:
-            self.stats.process_day_end()  # Gets daily stats
+            self.stats.process_day_end()
 
         self.datacollector.collect(self)
-        self.testing.current_productivity_impact = 0  # Resets the testing impact on productivity
 
+        # Return results for training and visualization
         return self._get_step_results(new_infections, post_step_infected)
 
         
     def _process_agent_steps(self):
         """Method to call each agent to get them to move in the environment for a step"""
         for agent in self.schedule.agents:
-            # Only process active agents or agents not in quarantine
-            if (agent.on_shift or agent.is_quarantined) and agent.pos is not None:
-                if self.social_distancing and agent.pos is not None:
-                    self.grid_manager.move_agent_social_distance(agent)
-                agent.step()
-    
+            if self.social_distancing and agent.pos is not None: #if social distancing is on call this function before step
+                self.grid_manager.move_agent_social_distance(agent)
+            agent.step() #step function in the agent class
     
     def process_scheduled_events(self):
         """Process all scheduled events in the correct order"""
         self.grid_manager.process_cleaning(self.current_step_in_day) #Call to process cleaning if correct day
-        for testing_type in ['light', 'medium', 'heavy']: 
-            if self.testing.should_run_testing(testing_type):
-                self.testing.process_testing(testing_type) #If its a testing step, call the processing testing method in testing class
-                
+        self.testing.process_testing(self.test_lvl)#If its a testing step, call the processing testing method in testing class
+            
         self.quarantine.process_quarantine() #If an agent tests positive for the infection, throw them in quarantine, if they are ready to be taken out do that.
         
         if self.should_change_shift(): #Checks if we are on a shift change step.
@@ -230,13 +194,9 @@ class factory_model(Model):
     def _get_step_results(self, new_infections, total_infected):
         """Calculates the new step results after each step."""
         base_productivity = self.stats.calculate_productivity()
-        cleaning_modifier = self.grid_manager.get_cleaning_productivity_modifier()
-        testing_modifier = self.testing.get_productivity_modifier()
 
         final_productivity = (
-            base_productivity * 
-            cleaning_modifier * 
-            testing_modifier
+            base_productivity
         )
 
         return {
@@ -248,40 +208,50 @@ class factory_model(Model):
             'quarantined': len(self.quarantine.quarantine_zone),
             'base_production': base_productivity,
             'infection_penalty': -2.0 * (new_infections / self.num_agents),
-            'cleaning_modifier': cleaning_modifier,
-            'testing_modifier': testing_modifier,
-            'active_agents': len(self.active_agents),
-            'inactive_agents': len(self.inactive_agents)
         }
 
     
     def update_config(self, action_dict):
-        """Method to update the current factor health configuration. Allows for the 6 variables to be changed during a simulation"""
+        """Method to update the current factory health configuration. Allows for the 6 variables to be changed during a simulation"""
+        print(f"\nUpdating configuration at step {self.current_step} (Day {self.current_day}):")
+        
         if "cleaning_type" in action_dict:
+            old_cleaning = self.initial_cleaning
             self.initial_cleaning = action_dict["cleaning_type"]
             self.grid_manager.set_cleaning_type(action_dict["cleaning_type"])
             self.cleaning_counter[action_dict["cleaning_type"]] += 1
+            print(f"Changed cleaning type: {old_cleaning} -> {action_dict['cleaning_type']}")
 
         if "splitting_level" in action_dict:
+            old_splitting = self._splitting_level
             self.splitting_level = action_dict["splitting_level"]
-            # self.splitting_level[action_dict["splitting_level"]] += 1
+            self.splitting_level_counter[str(action_dict["splitting_level"])] += 1
+            print(f"Changed splitting level: {old_splitting} -> {action_dict['splitting_level']}")
 
         if "testing_level" in action_dict:
+            old_testing = self.test_lvl
             self.test_lvl = action_dict["testing_level"]
             self.testing.set_testing_level(action_dict["testing_level"])
             self.swab_testing_counter[action_dict["testing_level"]] += 1
+            print(f"Changed testing level: {old_testing} -> {action_dict['testing_level']}")
 
         if "social_distancing" in action_dict:
+            old_distancing = self.social_distancing
             self.social_distancing = action_dict["social_distancing"]
-            self.social_distancing_counter += 1
+            self.social_distancing_counter[action_dict["social_distancing"]] += 1
+            print(f"Changed social distancing: {old_distancing} -> {action_dict['social_distancing']}")
 
         if "mask_mandate" in action_dict:
+            old_mask = self.mask_mandate
             self.mask_mandate = action_dict["mask_mandate"]
-            self.mask_counter[str(action_dict["mask_mandate"])] += 1
+            self.mask_counter[(action_dict["mask_mandate"])] += 1
+            print(f"Changed mask mandate: {old_mask} -> {action_dict['mask_mandate']}")
 
         if "shifts_per_day" in action_dict:
+            old_shifts = self.shifts_per_day
             self.shifts_per_day = action_dict["shifts_per_day"]
             self.steps_per_shift = self.steps_per_day // self.shifts_per_day
             self.next_shift_change = (self.current_step_in_day + self.steps_per_shift) % self.steps_per_day
             self.grid_manager.process_shift_change()
             self.shifts_counter[str(action_dict["shifts_per_day"])] += 1
+            print(f"Changed shifts per day: {old_shifts} -> {action_dict['shifts_per_day']}")
