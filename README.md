@@ -83,6 +83,11 @@ pip install --upgrade pip
 ```
 
 ## Usage
+To view the simulation, run the below command
+```bash 
+python src/Run.py
+```
+
 
 
 
